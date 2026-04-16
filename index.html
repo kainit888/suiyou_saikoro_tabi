@@ -194,20 +194,19 @@ const NIGHT_BUS_ROUTES = [
    MODE CONFIG
    ══════════════════════════════════════════════ */
 const MODE_CFG = {
-  walk:            {range:5,    spd:4,   label:'徒歩',     icon:'🚶', fare:(d)=>0},
-  local_bus:       {range:40,   spd:22,  label:'路線バス', icon:'🚌', fare:(d)=>Math.round((230+d*15)/10)*10},
-  local_train:     {range:120,  spd:42,  label:'在来線',   icon:'🚃', fare:(d)=>Math.round((150+d*16.2)/10)*10},
-  express_train:   {range:400,  spd:85,  label:'特急',     icon:'🚃', fare:(d)=>Math.round((150+d*16.2+1500)/100)*100},
-  shinkansen:      {range:1400, spd:230, label:'新幹線',   icon:'🚄', fare:(d)=>Math.round((1500+d*22)/100)*100},
-  highway_bus:     {range:700,  spd:65,  label:'高速バス', icon:'🚌', fare:(d)=>Math.round((500+d*4.5)/100)*100},
-  night_bus:       {range:900,  spd:60,  label:'夜行バス', icon:'🌙', fare:(d)=>Math.round((3000+d*3)/500)*500},
-  ferry:           {range:1500, spd:25,  label:'フェリー', icon:'⛴',  fare:(d)=>Math.round((3000+d*8)/500)*500},
-  domestic_flight: {range:2000, spd:400, label:'飛行機',   icon:'✈️', fare:(d)=>Math.round((8000+d*5)/1000)*1000},
+  // 徒歩・新幹線・飛行機は除外
+  local_bus:    {range:50,   spd:22,  label:'路線バス',   icon:'🚌', fare:(d)=>Math.round((230+d*15)/10)*10},
+  local_train:  {range:150,  spd:42,  label:'在来線(鈍行)',icon:'🚃', fare:(d)=>Math.round((150+d*16.2)/10)*10},
+  express_train:{range:450,  spd:85,  label:'特急',       icon:'🚃', fare:(d)=>Math.round((150+d*16.2+1500)/100)*100},
+  highway_bus:  {range:700,  spd:65,  label:'高速バス',   icon:'🚌', fare:(d)=>Math.round((500+d*4.5)/100)*100},
+  night_bus:    {range:900,  spd:55,  label:'夜行バス',   icon:'🌙', fare:(d)=>Math.round((3000+d*3)/500)*500},
+  ferry:        {range:1500, spd:25,  label:'フェリー',   icon:'⛴',  fare:(d)=>Math.round((3000+d*8)/500)*500},
+  rental_car:   {range:500,  spd:70,  label:'レンタカー', icon:'🚗', fare:(d)=>Math.round((5000+d*25)/500)*500},
 };
 
 function calcMins(dist, mode) {
-  const b = {walk:0,local_bus:5,local_train:8,express_train:15,
-    shinkansen:20,highway_bus:15,night_bus:30,ferry:60,domestic_flight:90};
+  const b = {local_bus:5,local_train:8,express_train:15,
+    highway_bus:15,night_bus:30,ferry:60,rental_car:30};
   return Math.max(3, Math.round(dist / MODE_CFG[mode].spd * 60 + (b[mode]||0)));
 }
 function fmtFare(yen) {
@@ -359,17 +358,19 @@ async function buildPool(from, dest) {
 
   const stations = await fetchNearby(from.lat, from.lng, 250);
 
+  // 対象モード（徒歩・新幹線・飛行機は除外）
+  const RAIL_MODES = ['local_bus','local_train','express_train','highway_bus','rental_car'];
+
   for (const st of stations) {
     const d = distKm(from, st);
     if (d < 0.3) continue;
     const ang = angleTo(from, st, dest);
 
-    // その駅に対して使える全モードを試みる
-    for (const mode of ['walk','local_bus','local_train','express_train','shinkansen','highway_bus']) {
+    for (const mode of RAIL_MODES) {
       const cfg = MODE_CFG[mode];
       if (d > cfg.range) continue;
-      // モード適合チェック（緩め: 駅が対応モードを持つかどうか）
-      if (!st.modes.includes(mode)) continue;
+      // 距離レンジのみで判定（st.modes チェックなし）
+      // → どの駅からでも路線バス・在来線・レンタカー等は基本的に利用可能
       const mins = calcMins(d, mode);
       const fare = cfg.fare(d);
       pool.push({to:{name:st.name,lat:st.lat,lng:st.lng,src:'heartrails'}, mode, dist:d, mins, fare, angle:ang});
@@ -417,7 +418,7 @@ function sorter(die, from, dest) {
     if (die === 4) return Math.random() - 0.5;         // 30°: ランダム
     if (die === 5) return b.mins - a.mins;             // 遅い前進: mins多い方が良い
     if (die === 6) {                                    // 快適前進: 速い手段優先
-      const spd = {domestic_flight:9,shinkansen:8,express_train:7,highway_bus:6,night_bus:5,ferry:4,local_train:3,local_bus:2,walk:1};
+      const spd = {express_train:7,highway_bus:6,rental_car:6,night_bus:5,ferry:4,local_train:3,local_bus:2};
       return (spd[b.mode]||0) - (spd[a.mode]||0);
     }
     return 0;
