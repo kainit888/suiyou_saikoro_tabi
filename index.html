@@ -68,6 +68,9 @@ input:focus{border-color:var(--am)}
 .done .big{font-size:52px;margin-bottom:12px}
 #toast{position:fixed;bottom:calc(64px + var(--sab));left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);color:var(--tx);padding:9px 20px;border-radius:20px;font-size:13px;border:1px solid var(--bd);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;z-index:99}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* pool stats bar */
+.pstat{font-size:11px;color:var(--dim);padding:6px 0;line-height:1.5}
+.pstat b{color:var(--am);font-weight:600}
 </style>
 </head>
 <body>
@@ -102,6 +105,7 @@ input:focus{border-color:var(--am)}
       </div>
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
+        <div id="poolstat"></div>
         <div class="lbl">ダイスを振って選ぶ</div>
         <div id="clist"></div>
         <button class="btn btn-s" style="margin-top:4px" onclick="endGame()">🏁 終了</button>
@@ -137,8 +141,6 @@ input:focus{border-color:var(--am)}
 
 /* ══════════════════════════════════════════════════════
    STATIC ROUTES  フェリー・夜行バス
-   （公開APIが存在しないため静的データで管理）
-   [乗り場名, lat, lng, 目的地名, lat, lng, 所要min, 会社名]
    ══════════════════════════════════════════════════════ */
 const FERRY = [
   ['大洗港',   36.3163,140.5729, '苫小牧東港',42.6410,141.6590, 1080,'商船三井フェリー'],
@@ -151,6 +153,15 @@ const FERRY = [
   ['東京港',   35.6350,139.7750, '苫小牧港',  42.6333,141.6038, 2400,'川崎近海汽船'],
   ['東京港',   35.6350,139.7750, '徳島港',    34.0600,134.5700,  840,'南海フェリー'],
   ['名古屋港', 35.0800,136.8900, '仙台港',    38.2830,141.0170,  960,'太平洋フェリー'],
+  ['大阪南港', 34.6270,135.4470, '別府港',    33.2800,131.4900,  720,'さんふらわあ'],
+  ['神戸港',   34.6760,135.1940, '高松港',    34.3500,134.0500,  240,'ジャンボフェリー'],
+  ['鳥羽港',   34.4800,136.8400, '伊良湖港',  34.5800,137.0200,   55,'伊勢湾フェリー'],
+  ['鹿児島港', 31.5900,130.5700, '桜島港',    31.5900,130.6500,   15,'桜島フェリー'],
+  ['三崎港',   34.2500,136.8100, '師崎港',    34.7100,136.9200,   90,'名鉄海上観光船'],
+  ['博多港',   33.6000,130.4000, '壱岐・郷ノ浦港', 33.7500,129.6900, 140,'九州郵船'],
+  ['博多港',   33.6000,130.4000, '対馬・厳原港',   34.2000,129.2900, 285,'九州郵船'],
+  ['鹿児島新港',31.6000,130.5700,'奄美大島・名瀬港',28.3800,129.4900, 660,'マルエーフェリー'],
+  ['那覇港',   26.2200,127.6700, '本部港',    26.6500,127.8800, 105,'沖縄エアーシャトル'],
 ];
 const NIGHTBUS = [
   ['浜松駅',  34.7108,137.7261, '東京駅',  35.6812,139.7671,  210,'遠鉄バス他'],
@@ -159,17 +170,102 @@ const NIGHTBUS = [
   ['名古屋駅',35.1709,136.8815, '東京駅',  35.6812,139.7671,  330,'JRバス他'],
   ['名古屋駅',35.1709,136.8815, '大阪駅',  34.7026,135.4959,  180,'名鉄バス他'],
   ['名古屋駅',35.1709,136.8815, '仙台駅',  38.2682,140.8694,  480,'Willer他'],
+  ['名古屋駅',35.1709,136.8815, '金沢駅',  36.5784,136.6481,  240,'JRバス他'],
+  ['名古屋駅',35.1709,136.8815, '福岡駅',  33.5898,130.4201,  600,'Willer他'],
   ['大阪駅',  34.7026,135.4959, '東京駅',  35.6812,139.7671,  480,'Willer他'],
   ['大阪駅',  34.7026,135.4959, '仙台駅',  38.2682,140.8694,  600,'Willer他'],
   ['大阪駅',  34.7026,135.4959, '福岡駅',  33.5898,130.4201,  480,'西鉄バス他'],
+  ['大阪駅',  34.7026,135.4959, '金沢駅',  36.5784,136.6481,  300,'西日本JRバス'],
+  ['大阪駅',  34.7026,135.4959, '広島駅',  34.3853,132.4553,  360,'Willer他'],
   ['東京駅',  35.6812,139.7671, '仙台駅',  38.2682,140.8694,  270,'JRバス他'],
   ['東京駅',  35.6812,139.7671, '青森駅',  40.8246,140.7400,  480,'JRバス他'],
   ['東京駅',  35.6812,139.7671, '大阪駅',  34.7026,135.4959,  480,'Willer他'],
   ['東京駅',  35.6812,139.7671, '名古屋駅',35.1709,136.8815,  330,'JRバス他'],
+  ['東京駅',  35.6812,139.7671, '金沢駅',  36.5784,136.6481,  420,'西日本JRバス'],
+  ['東京駅',  35.6812,139.7671, '新潟駅',  37.9127,139.0595,  330,'Willer他'],
+  ['東京駅',  35.6812,139.7671, '長野駅',  36.6448,138.1880,  240,'Willer他'],
+  ['東京駅',  35.6812,139.7671, '広島駅',  34.3853,132.4553,  600,'Willer他'],
+  ['東京駅',  35.6812,139.7671, '福岡駅',  33.5898,130.4201,  780,'Willer他'],
   ['博多駅',  33.5898,130.4201, '大阪駅',  34.7026,135.4959,  540,'西鉄バス他'],
   ['博多駅',  33.5898,130.4201, '東京駅',  35.6812,139.7671,  780,'Willer他'],
+  ['博多駅',  33.5898,130.4201, '鹿児島駅',31.5794,130.5571,  300,'南九州バス'],
   ['仙台駅',  38.2682,140.8694, '東京駅',  35.6812,139.7671,  270,'JRバス他'],
   ['仙台駅',  38.2682,140.8694, '大阪駅',  34.7026,135.4959,  600,'Willer他'],
+  ['京都駅',  34.9850,135.7582, '東京駅',  35.6812,139.7671,  460,'Willer他'],
+  ['京都駅',  34.9850,135.7582, '金沢駅',  36.5784,136.6481,  260,'西日本JRバス'],
+  ['広島駅',  34.3853,132.4553, '東京駅',  35.6812,139.7671,  600,'Willer他'],
+  ['広島駅',  34.3853,132.4553, '大阪駅',  34.7026,135.4959,  360,'Willer他'],
+  ['広島駅',  34.3853,132.4553, '福岡駅',  33.5898,130.4201,  300,'Willer他'],
+  ['金沢駅',  36.5784,136.6481, '東京駅',  35.6812,139.7671,  420,'西日本JRバス'],
+];
+
+/* ══════════════════════════════════════════════════════
+   LAYER 1: 静的 全国主要都市・交通ハブ（約170箇所）
+   API障害時にも最低限の候補を保証する
+   [name, lat, lng]
+   ══════════════════════════════════════════════════════ */
+const JAPAN_CITIES = [
+  // 北海道
+  ['札幌駅',43.0687,141.3508],['旭川駅',43.7700,142.3650],['函館駅',41.7737,140.7268],
+  ['釧路駅',42.9849,144.3820],['帯広駅',42.9236,143.2037],['北見駅',43.8028,143.8957],
+  ['小樽駅',43.1969,140.9940],['苫小牧駅',42.6333,141.6038],['室蘭駅',42.3150,140.9737],
+  ['稚内駅',45.4158,141.6720],['網走駅',44.0184,144.2697],
+  // 東北
+  ['青森駅',40.8246,140.7400],['弘前駅',40.5940,140.4908],['八戸駅',40.5125,141.4886],
+  ['盛岡駅',39.7036,141.1527],['秋田駅',39.7196,140.1023],['山形駅',38.2488,140.3283],
+  ['仙台駅',38.2682,140.8694],['福島駅',37.7543,140.4595],['郡山駅',37.3982,140.3884],
+  ['いわき駅',36.9597,140.8916],['会津若松駅',37.5074,139.9300],
+  // 関東
+  ['東京駅',35.6812,139.7671],['新宿駅',35.6896,139.7006],['渋谷駅',35.6580,139.7016],
+  ['池袋駅',35.7295,139.7109],['上野駅',35.7141,139.7774],['品川駅',35.6284,139.7388],
+  ['横浜駅',35.4657,139.6221],['大宮駅',35.9061,139.6231],['千葉駅',35.6073,140.1063],
+  ['水戸駅',36.3418,140.4469],['宇都宮駅',36.5597,139.8983],['前橋駅',36.3833,139.0667],
+  ['高崎駅',36.3221,139.0127],['立川駅',35.6977,139.4135],['町田駅',35.5423,139.4456],
+  ['藤沢駅',35.3385,139.4887],['柏駅',35.8680,139.9763],['川崎駅',35.5310,139.6980],
+  ['相模原駅',35.5948,139.3436],['熊谷駅',36.1477,139.3886],['小田原駅',35.2567,139.1551],
+  // 中部
+  ['名古屋駅',35.1709,136.8815],['浜松駅',34.7108,137.7261],['静岡駅',34.9769,138.3831],
+  ['長野駅',36.6448,138.1880],['松本駅',36.2312,137.9692],['金沢駅',36.5784,136.6481],
+  ['富山駅',36.7003,137.2133],['新潟駅',37.9127,139.0595],['甲府駅',35.6679,138.5689],
+  ['福井駅',36.0616,136.2233],['岐阜駅',35.4091,136.7568],['豊橋駅',34.7628,137.3838],
+  ['沼津駅',35.0996,138.8596],['長岡駅',37.4457,138.8543],['上越妙高駅',37.0626,138.2318],
+  ['諏訪駅',36.0465,138.1144],['飯田駅',35.5148,137.8211],['高岡駅',36.7455,137.0155],
+  // 関西
+  ['大阪駅',34.7026,135.4959],['京都駅',34.9850,135.7582],['神戸駅',34.6790,135.1950],
+  ['奈良駅',34.6810,135.8199],['和歌山駅',34.2280,135.1907],['大津駅',35.0046,135.8588],
+  ['姫路駅',34.8265,134.6920],['三宮駅',34.6955,135.1956],['天王寺駅',34.6468,135.5130],
+  ['難波駅',34.6625,135.5006],['堺駅',34.5781,135.4688],['明石駅',34.6486,134.9914],
+  ['豊岡駅',35.5367,134.8200],['舞鶴駅',35.4548,135.3256],['橿原神宮前駅',34.4850,135.7939],
+  ['新大阪駅',34.7336,135.5000],
+  // 中国
+  ['広島駅',34.3853,132.4553],['岡山駅',34.6552,133.9195],['倉敷駅',34.6005,133.7606],
+  ['山口駅',34.1747,131.4732],['松江駅',35.4626,132.7536],['鳥取駅',35.4925,134.2282],
+  ['下関駅',33.9510,130.9205],['米子駅',35.4275,133.3338],['尾道駅',34.4079,133.2042],
+  ['福山駅',34.4862,133.3638],['出雲市駅',35.3614,132.7554],['津山駅',35.0647,134.0078],
+  // 四国
+  ['高松駅',34.3500,134.0500],['徳島駅',34.0735,134.5520],['松山駅',33.8413,132.7527],
+  ['高知駅',33.5668,133.5432],['今治駅',34.0629,132.9952],['宇和島駅',33.2250,132.5611],
+  // 九州
+  ['博多駅',33.5898,130.4201],['小倉駅',33.8869,130.8828],['久留米駅',33.3166,130.5087],
+  ['大分駅',33.2328,131.6074],['佐賀駅',33.2645,130.2987],['長崎駅',32.7520,129.8710],
+  ['熊本駅',32.7903,130.7460],['宮崎駅',31.9165,131.4266],['鹿児島中央駅',31.5794,130.5571],
+  ['別府駅',33.2828,131.5020],['延岡駅',32.5837,131.6675],['佐世保駅',33.1579,129.7228],
+  // 沖縄
+  ['那覇(おもろまち)',26.2246,127.6935],['名護市',26.5916,127.9771],
+  ['沖縄市',26.3342,127.8056],['宮古島市',24.7853,125.2814],['石垣市',24.3412,124.1553],
+  // 追加ハブ
+  ['上田駅',36.4028,138.2505],['塩尻駅',36.1149,137.9494],['敦賀駅',35.6445,136.0551],
+  ['津駅',34.7327,136.5113],['彦根駅',35.2701,136.2498],['米原駅',35.3143,136.2916],
+  ['直江津駅',37.1686,138.2401],['越後湯沢駅',36.9365,138.8071],
+  ['軽井沢駅',36.3479,138.6358],['三島駅',35.1267,138.9116],['熱海駅',35.1048,139.0777],
+  ['土浦駅',36.0743,140.2038],['つくば駅',36.0830,140.1138],
+  ['日光駅',36.7483,139.6169],['銚子駅',35.7342,140.8275],['館山駅',34.9969,139.8664],
+  ['松阪駅',34.5694,136.5270],['伊勢市駅',34.4871,136.7105],
+  ['白浜駅',33.6842,135.3550],['城崎温泉駅',35.6258,134.8100],
+  ['出雲大社前駅',35.3955,132.6857],['琴平駅',34.1896,133.8200],
+  ['道後温泉駅',33.8517,132.7875],['指宿駅',31.2387,130.6350],
+  ['阿蘇駅',32.9477,131.0741],['由布院駅',33.2684,131.3688],
+  ['天橋立駅',35.5682,135.1768],
 ];
 
 /* ══════════════════════════════════════════════════════
@@ -209,27 +305,27 @@ function fmtFare(y) {
    GEO
    ══════════════════════════════════════════════════════ */
 function distKm(a,b){
-  const R=6371,φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180,
-    dφ=(b.lat-a.lat)*Math.PI/180,dλ=(b.lng-a.lng)*Math.PI/180;
-  const x=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  const R=6371,f1=a.lat*Math.PI/180,f2=b.lat*Math.PI/180,
+    df=(b.lat-a.lat)*Math.PI/180,dl=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(df/2)**2+Math.cos(f1)*Math.cos(f2)*Math.sin(dl/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 function bearing(a,b){
-  const dL=(b.lng-a.lng)*Math.PI/180,φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180;
-  return Math.atan2(Math.sin(dL)*Math.cos(φ2),Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(dL))*180/Math.PI;
+  const dL=(b.lng-a.lng)*Math.PI/180,f1=a.lat*Math.PI/180,f2=b.lat*Math.PI/180;
+  return Math.atan2(Math.sin(dL)*Math.cos(f2),Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dL))*180/Math.PI;
 }
 function angleDiff(from, to, dest) {
-  // 0° = 目的地方向 / 180° = 真逆
   const db = bearing(from, dest), cb = bearing(from, to);
   return Math.abs(((db - cb + 540) % 360) - 180);
 }
 
 /* ══════════════════════════════════════════════════════
-   HEARTRAILS
+   LAYER 2: HEARTRAILS MULTI-GRID FETCH
+   現在地 + 周囲8方向（約50km間隔）の9点から駅取得
    ══════════════════════════════════════════════════════ */
 const _cache = new Map();
-async function fetchNearby(lat, lng) {
-  const k = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+async function fetchHeartrailsSingle(lat, lng) {
+  const k = `hr:${lat.toFixed(2)},${lng.toFixed(2)}`;
   if (_cache.has(k)) return _cache.get(k);
   try {
     const url = `https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=300`;
@@ -238,34 +334,73 @@ async function fetchNearby(lat, lng) {
     const d = await r.json();
     const list = (d?.response?.station || []).map(s=>({
       name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x),
-      line: s.line, geo_dist: parseFloat(s.geo_distance||0),
+      line: s.line, src:'heartrails',
     }));
     _cache.set(k, list);
     return list;
-  } catch(e) { console.warn('[fetchNearby]', e.message); return []; }
+  } catch(e) { console.warn('[heartrails]', e.message); return []; }
+}
+
+async function fetchHeartrailsGrid(lat, lng) {
+  // 0.45度 ≒ 約50km
+  const D = 0.45;
+  const offsets = [
+    [0,0], [-D,-D], [-D,0], [-D,D],
+    [0,-D], [0,D],
+    [D,-D], [D,0], [D,D],
+  ];
+  const promises = offsets.map(([dlat,dlng]) =>
+    fetchHeartrailsSingle(lat + dlat, lng + dlng)
+  );
+  const results = await Promise.allSettled(promises);
+  const all = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') all.push(...r.value);
+  }
+  return all;
+}
+
+/* ══════════════════════════════════════════════════════
+   LAYER 3: OVERPASS API (OpenStreetMap)
+   半径200km圏の鉄道駅をすべて取得
+   ══════════════════════════════════════════════════════ */
+async function fetchOverpassStations(lat, lng, radiusM = 200000) {
+  const k = `ov:${lat.toFixed(1)},${lng.toFixed(1)},${radiusM}`;
+  if (_cache.has(k)) return _cache.get(k);
+  const query = `[out:json][timeout:30];(node["railway"="station"](around:${radiusM},${lat},${lng});node["railway"="halt"](around:${radiusM},${lat},${lng}););out body;`;
+  try {
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+    const r = await Promise.race([
+      fetch(url),
+      new Promise((_,j) => setTimeout(() => j(new Error('overpass timeout')), 25000))
+    ]);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    const list = (d?.elements || [])
+      .filter(e => e.lat && e.lon && e.tags?.name)
+      .map(e => {
+        let name = e.tags.name;
+        if (!name.endsWith('駅') && !name.includes('停留場')) name += '駅';
+        return { name, lat: e.lat, lng: e.lon, src:'overpass' };
+      });
+    _cache.set(k, list);
+    console.log(`[overpass] ${list.length}件取得`);
+    return list;
+  } catch(e) {
+    console.warn('[overpass]', e.message);
+    return [];
+  }
 }
 
 /* ══════════════════════════════════════════════════════
    GEOCODE
    ══════════════════════════════════════════════════════ */
-const GEO_FB = {
-  '北海道':{lat:43.0687,lng:141.3508},'札幌':{lat:43.0687,lng:141.3508},
-  '函館':{lat:41.7737,lng:140.7268},'旭川':{lat:43.7700,lng:142.3650},
-  '釧路':{lat:42.9849,lng:144.3820},'青森':{lat:40.8246,lng:140.7400},
-  '仙台':{lat:38.2682,lng:140.8694},'秋田':{lat:39.7196,lng:140.1023},
-  '盛岡':{lat:39.7036,lng:141.1527},'新潟':{lat:37.9127,lng:139.0595},
-  '長野':{lat:36.6448,lng:138.1880},'金沢':{lat:36.5784,lng:136.6481},
-  '富山':{lat:36.7003,lng:137.2133},'東京':{lat:35.6812,lng:139.7671},
-  '横浜':{lat:35.4657,lng:139.6221},'千葉':{lat:35.6073,lng:140.1063},
-  '大宮':{lat:35.9061,lng:139.6231},'水戸':{lat:36.3418,lng:140.4469},
-  '名古屋':{lat:35.1709,lng:136.8815},'浜松':{lat:34.7108,lng:137.7261},
-  '静岡':{lat:34.9769,lng:138.3831},'大阪':{lat:34.7026,lng:135.4959},
-  '京都':{lat:34.9850,lng:135.7582},'神戸':{lat:34.6790,lng:135.1950},
-  '広島':{lat:34.3853,lng:132.4553},'岡山':{lat:34.6552,lng:133.9195},
-  '福岡':{lat:33.5904,lng:130.4017},'博多':{lat:33.5898,lng:130.4201},
-  '熊本':{lat:32.7903,lng:130.7460},'鹿児島':{lat:31.5794,lng:130.5571},
-  '那覇':{lat:26.2124,lng:127.6809},'沖縄':{lat:26.2124,lng:127.6809},
-};
+const GEO_FB = {};
+for (const [name, lat, lng] of JAPAN_CITIES) {
+  const key = name.replace(/駅$|市$|町$|村$/,'').replace(/\(.+\)/,'');
+  GEO_FB[key] = {lat, lng};
+}
+
 async function geocode(text) {
   const q = text.replace(/駅$/,'').trim();
   try {
@@ -303,28 +438,81 @@ async function doGPS() {
 }
 
 /* ══════════════════════════════════════════════════════
-   MASTER POOL BUILDER
-   ──────────────────────────────────────────────────────
-   ① Heartrails で現在地から300km圏の全駅を取得
-   ② 各駅 × 全手段（距離レンジ内）でエントリを生成
-   ③ フェリー・夜行バスの静的ルートを追加
-   → これが「その地点から行ける全候補リスト」になる
+   DEDUPLICATION
+   名前完全一致 or 3km以内の同名候補を統合
    ══════════════════════════════════════════════════════ */
-async function buildMasterPool(from, dest) {
-  const stations = await fetchNearby(from.lat, from.lng);
-  const pool = [];
+function deduplicateLocations(locations) {
+  const seen = new Map(); // name -> location
+  const result = [];
+  for (const loc of locations) {
+    const key = loc.name;
+    if (seen.has(key)) continue;
+    // 近接重複チェック（3km以内の異名同地点を除去）
+    let isDup = false;
+    for (const [, existing] of seen) {
+      if (distKm(loc, existing) < 3) { isDup = true; break; }
+    }
+    if (isDup) continue;
+    seen.set(key, loc);
+    result.push(loc);
+  }
+  return result;
+}
 
-  // Heartrails駅 × 全手段
-  for (const st of stations) {
-    const dist = distKm(from, st);
-    if (dist < 0.3) continue; // 現在地と同じ場所は除外
-    const angle = angleDiff(from, st, dest);
+/* ══════════════════════════════════════════════════════
+   MASTER POOL BUILDER（3層アーキテクチャ）
+   ──────────────────────────────────────────────────────
+   Layer 1: JAPAN_CITIES 静的データ（即時）
+   Layer 2: Heartrails グリッドフェッチ（9並列）
+   Layer 3: Overpass API（1クエリで広範囲）
+   → マージ・重複除去 → 駅×モード展開 → プール完成
+   ══════════════════════════════════════════════════════ */
+let _lastPoolStats = null;
+
+async function buildMasterPool(from, dest) {
+  const distToDest = distKm(from, dest);
+
+  // === 3層並列フェッチ ===
+  const [heartrailsResult, overpassResult] = await Promise.allSettled([
+    fetchHeartrailsGrid(from.lat, from.lng),
+    fetchOverpassStations(from.lat, from.lng,
+      Math.min(300000, Math.max(100000, distToDest * 500))  // 距離に応じて半径調整
+    ),
+  ]);
+
+  const heartrailsStations = heartrailsResult.status === 'fulfilled' ? heartrailsResult.value : [];
+  const overpassStations   = overpassResult.status === 'fulfilled'   ? overpassResult.value   : [];
+
+  // Layer 1: 静的データ（半径に関係なく全国を候補に入れる）
+  const staticLocations = JAPAN_CITIES.map(([name, lat, lng]) => ({
+    name, lat, lng, src:'static'
+  }));
+
+  // === マージ & 重複除去 ===
+  const allLocations = deduplicateLocations([
+    ...overpassStations,    // Overpass優先（最もデータが多い）
+    ...heartrailsStations,  // Heartrails次点
+    ...staticLocations,     // 静的データ最後（遠方カバー用）
+  ]);
+
+  // === 駅 × モード展開 → プールエントリ生成 ===
+  const pool = [];
+  const minDist = 0.5; // 現在地から0.5km以内は除外
+
+  for (const loc of allLocations) {
+    const dist = distKm(from, loc);
+    if (dist < minDist) continue;
+    const angle = angleDiff(from, loc, dest);
 
     for (const [mode, cfg] of Object.entries(MODES)) {
-      if (mode === 'night_bus' || mode === 'ferry') continue; // 静的データで別途追加
+      if (mode === 'night_bus' || mode === 'ferry') continue;
       if (dist > cfg.maxKm) continue;
+      // 距離が短すぎる特急・高速バスは除外
+      if (mode === 'express_train' && dist < 30) continue;
+      if (mode === 'highway_bus' && dist < 20) continue;
+      if (mode === 'rental_car' && dist < 10) continue;
       pool.push({
-        to:    {name:st.name, lat:st.lat, lng:st.lng},
+        to:    {name:loc.name, lat:loc.lat, lng:loc.lng},
         mode,  dist, angle,
         mins:  calcMins(dist, mode),
         fare:  cfg.fare(dist),
@@ -333,77 +521,103 @@ async function buildMasterPool(from, dest) {
     }
   }
 
-  // フェリー静的ルート
+  // === フェリー静的ルート ===
   for (const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY) {
     const boardDist = distKm(from, {lat:fla, lng:fln});
-    if (boardDist > 50) continue; // 乗り場まで50km以内
+    if (boardDist > 60) continue;
     const to = {name:tn, lat:tla, lng:tln};
     const dist = distKm(from, to);
     const angle = angleDiff(from, to, dest);
     pool.push({to, mode:'ferry', dist, angle, mins, fare:MODES.ferry.fare(dist), note:`${co}（${fn}発）`});
   }
 
-  // 夜行バス静的ルート
+  // === 夜行バス静的ルート ===
   for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHTBUS) {
     const boardDist = distKm(from, {lat:fla, lng:fln});
-    if (boardDist > 40) continue; // 乗り場まで40km以内
+    if (boardDist > 50) continue;
     const to = {name:tn, lat:tla, lng:tln};
     const dist = distKm(from, to);
     const angle = angleDiff(from, to, dest);
     pool.push({to, mode:'night_bus', dist, angle, mins, fare:MODES.night_bus.fare(dist), note:`${co}（${fn}発）`});
   }
 
-  console.log(`[pool] ${stations.length}駅 → ${pool.length}エントリ`);
+  // 統計記録
+  _lastPoolStats = {
+    heartrails: heartrailsStations.length,
+    overpass: overpassStations.length,
+    static: staticLocations.length,
+    uniqueLocations: allLocations.length,
+    totalEntries: pool.length,
+  };
+  console.log(`[pool] Heartrails:${_lastPoolStats.heartrails} Overpass:${_lastPoolStats.overpass} Static:${_lastPoolStats.static} → ${allLocations.length}地点 → ${pool.length}エントリ`);
   return pool;
 }
 
 /* ══════════════════════════════════════════════════════
-   CANDIDATE PICKER
+   CANDIDATE PICKER（改良版）
    ──────────────────────────────────────────────────────
-   マスタープールから出目1〜6の条件で1件ずつ選出。
-   全6件の行き先が被らないよう usedDests で管理する。
-
    出目の方向定義（angleDiff: 0=目的地方向 180=真逆）:
-   1: 真逆方向（angle最大）
-   2: 逆方向ランダム（angle > 90°）
-   3: 45°ずれランダム（angle 20〜70°）
-   4: 30°ずれランダム（angle 10〜50°）
-   5: 前進・時間がかかる手段（angle < 90°, mins優先）
-   6: 前進・快適な手段（angle < 90°, 速い手段優先）
+   🎲1: 真逆方向（angle最大）
+   🎲2: 逆方向ランダム（angle ≥ 90°）
+   🎲3: 90°程度ずれランダム（angle 45〜135°）
+   🎲4: 45°程度ずれランダム（angle 15〜75°）
+   🎲5: 30°程度ずれランダム（angle 5〜50°）
+   🎲6: 目的地方向（angle < 30°, 速い手段優先）
+
+   改良点:
+   ・各出目で距離帯も分散させる（近距離・中距離を優先的にばらけさせる）
+   ・行き先名だけでなく座標で重複判定（5km圏内は同一扱い）
+   ・フォールバックを段階的に緩和し、必ず6択出す
    ══════════════════════════════════════════════════════ */
 
-// 出目ごとの角度帯（段階的フォールバック付き）
 const BANDS = {
-  1: [[150,180],[120,180],[90,180],[0,180]],
-  2: [[90,180], [70,180], [50,180],[0,180]],
-  3: [[20,70],  [10,80],  [5,90], [0,180]],
-  4: [[10,50],  [5,60],   [0,70], [0,180]],
-  5: [[0,90],   [0,110],  [0,140],[0,180]],
-  6: [[0,90],   [0,110],  [0,140],[0,180]],
+  1: [[150,180],[120,180],[90,180],[60,180],[0,180]],
+  2: [[90,180], [70,180], [50,180],[30,180],[0,180]],
+  3: [[45,135], [30,150], [15,160],[0,180]],
+  4: [[15,75],  [10,90],  [5,110], [0,140],[0,180]],
+  5: [[5,50],   [0,60],   [0,80],  [0,120],[0,180]],
+  6: [[0,30],   [0,50],   [0,70],  [0,100],[0,180]],
 };
 
-// 速い手段ほど高スコア
 const SPEED_RANK = {express_train:6, highway_bus:5, rental_car:5, night_bus:4, ferry:3, local_train:2, local_bus:1};
 
-function pickOne(pool, die, usedDests) {
+// 距離の多様性を確保するスコアリング
+function diversityScore(candidate, usedDists) {
+  if (usedDists.length === 0) return 0;
+  // 既に選ばれた候補との距離差が大きいほど高スコア
+  const minGap = Math.min(...usedDists.map(d => Math.abs(candidate.dist - d)));
+  return minGap;
+}
+
+function pickOne(pool, die, usedDests, usedDists) {
   for (const [minA, maxA] of BANDS[die]) {
-    // この帯に入る & まだ使われていない行き先
-    let candidates = pool.filter(c => c.angle >= minA && c.angle <= maxA && !usedDests.has(c.to.name));
+    let candidates = pool.filter(c =>
+      c.angle >= minA && c.angle <= maxA &&
+      !usedDests.has(c.to.name) &&
+      // 座標での近接重複チェック（5km以内は同一扱い）
+      ![...usedDests.values()].some(u =>
+        u.lat !== undefined && distKm(c.to, u) < 5
+      )
+    );
     if (candidates.length === 0) continue;
 
-    // 出目ごとのソート
     if (die === 1) {
-      candidates.sort((a,b) => b.angle - a.angle); // 真逆: angle最大
-    } else if (die === 5) {
-      candidates.sort((a,b) => b.mins - a.mins);   // 遅い前進: mins最大
+      // 真逆: angle最大 & 距離多様性
+      candidates.sort((a,b) => (b.angle - a.angle) * 0.7 + (diversityScore(b, usedDists) - diversityScore(a, usedDists)) * 0.3);
     } else if (die === 6) {
-      candidates.sort((a,b) => (SPEED_RANK[b.mode]||0) - (SPEED_RANK[a.mode]||0)); // 快適: 速い手段優先
+      // 目的地方向: 速い手段 & 距離が程よい
+      candidates.sort((a,b) => {
+        const sa = (SPEED_RANK[a.mode]||0) + diversityScore(a, usedDists) * 0.01;
+        const sb = (SPEED_RANK[b.mode]||0) + diversityScore(b, usedDists) * 0.01;
+        return sb - sa;
+      });
     } else {
-      // 2,3,4: ランダム（シャッフル）
-      for (let i = candidates.length-1; i > 0; i--) {
-        const j = Math.floor(Math.random()*(i+1));
-        [candidates[i],candidates[j]] = [candidates[j],candidates[i]];
-      }
+      // 2,3,4,5: ランダム（ただし距離帯が被りにくいよう重み付きシャッフル）
+      candidates = candidates.map(c => ({
+        ...c,
+        _score: Math.random() + diversityScore(c, usedDists) * 0.005,
+      }));
+      candidates.sort((a,b) => b._score - a._score);
     }
 
     return candidates[0];
@@ -412,14 +626,18 @@ function pickOne(pool, die, usedDests) {
 }
 
 function assignAllDice(pool) {
-  const usedDests = new Set();
+  const usedDests = new Map(); // name -> {lat,lng}
+  const usedDists = [];
   const result = [];
 
   for (let die = 1; die <= 6; die++) {
-    const picked = pickOne(pool, die, usedDests);
+    const picked = pickOne(pool, die, usedDests, usedDists);
     if (picked) {
-      usedDests.add(picked.to.name);
-      result.push({...picked, dieValue: die});
+      usedDests.set(picked.to.name, picked.to);
+      usedDists.push(picked.dist);
+      // _score は内部用なので除去
+      const { _score, ...clean } = picked;
+      result.push({...clean, dieValue: die});
     }
   }
   return result;
@@ -429,7 +647,7 @@ function assignAllDice(pool) {
    STATE
    ══════════════════════════════════════════════════════ */
 let S = null;
-const SK = 'saikoro_v6';
+const SK = 'saikoro_v7';
 function save() { try { S ? localStorage.setItem(SK,JSON.stringify(S)) : localStorage.removeItem(SK); } catch{} }
 function load() { try { const r=localStorage.getItem(SK); if(r) S=JSON.parse(r); } catch{S=null;} }
 
@@ -456,7 +674,7 @@ async function loadCandidates() {
   S.status = 'loading'; render();
   try {
     const pool = await buildMasterPool(S.currentLocation, S.destination);
-    S._pool = pool; // デバッグ用
+    S._pool = pool;
     S.candidates = assignAllDice(pool);
     S.status = 'waiting_dice';
   } catch(e) {
@@ -519,13 +737,14 @@ function render() {
   if (S.status === 'loading') {
     showSt('dice');
     renderPc();
+    document.getElementById('poolstat').innerHTML = '';
     document.getElementById('clist').innerHTML =
-      `<div class="loading"><div class="sp"></div><span>Heartrailsから駅データ取得中…</span></div>`;
+      `<div class="loading"><div class="sp"></div><span>候補を検索中…（Overpass + Heartrails + 静的データ）</span></div>`;
     return;
   }
 
   if (S.status === 'waiting_dice') {
-    showSt('dice'); renderPc(); renderList(); return;
+    showSt('dice'); renderPc(); renderPoolStat(); renderList(); return;
   }
   if (S.status === 'traveling') {
     showSt('travel'); renderTravel(); return;
@@ -549,11 +768,21 @@ function renderPc() {
      <div style="font-size:11px;color:var(--dim);margin-top:2px">残り約 ${d} km ／ ${done} レグ完了</div>`;
 }
 
+function renderPoolStat() {
+  const el = document.getElementById('poolstat');
+  if (!_lastPoolStats) { el.innerHTML = ''; return; }
+  const s = _lastPoolStats;
+  el.innerHTML = `<div class="pstat">
+    📊 プール: <b>${s.uniqueLocations}</b>地点 → <b>${s.totalEntries}</b>候補
+    （Overpass:<b>${s.overpass}</b> / Heartrails:<b>${s.heartrails}</b> / 静的:<b>${s.static}</b>）
+  </div>`;
+}
+
 function renderList() {
   const cands = S.candidates || [];
   if (!cands.length) {
     document.getElementById('clist').innerHTML =
-      `<div class="loading"><span style="color:var(--re)">候補が見つかりませんでした（Heartrails APIを確認してください）</span></div>`;
+      `<div class="loading"><span style="color:var(--re)">候補が見つかりませんでした（APIの状態を確認してください）</span></div>`;
     return;
   }
   document.getElementById('clist').innerHTML = cands.map(c => {
@@ -620,7 +849,7 @@ function renderLog() {
    ══════════════════════════════════════════════════════ */
 function doShare() {
   if (!S) { toast('ゲームが開始されていません'); return; }
-  const d={v:6,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
+  const d={v:7,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
     legs:S.legs.slice(-5).map(l=>({n:l.legNumber,r:l.diceRoll,
       s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,
         dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins,fare:l.selected.fare}:null}))};
@@ -648,11 +877,18 @@ function toast(m){const e=document.getElementById('toast');e.textContent=m;e.cla
 /* API health check */
 async function checkApi() {
   const el = document.getElementById('apistatus');
+  const results = [];
   try {
     const r = await Promise.race([fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'), new Promise((_,j)=>setTimeout(()=>j(),5000))]);
-    el.textContent = r.ok ? 'Heartrails ✅' : 'API ⚠️';
-    el.style.color = r.ok ? 'var(--gr)' : 'var(--re)';
-  } catch { el.textContent='API ⚠️'; el.style.color='var(--re)'; }
+    results.push(r.ok ? 'HR✅' : 'HR⚠️');
+  } catch { results.push('HR⚠️'); }
+  try {
+    const q = encodeURIComponent('[out:json][timeout:5];node["railway"="station"](around:1000,35.68,139.77);out 1;');
+    const r = await Promise.race([fetch(`https://overpass-api.de/api/interpreter?data=${q}`), new Promise((_,j)=>setTimeout(()=>j(),8000))]);
+    results.push(r.ok ? 'OSM✅' : 'OSM⚠️');
+  } catch { results.push('OSM⚠️'); }
+  el.textContent = results.join(' ');
+  el.style.color = results.every(r=>r.includes('✅')) ? 'var(--gr)' : 'var(--am)';
 }
 
 /* INIT */
