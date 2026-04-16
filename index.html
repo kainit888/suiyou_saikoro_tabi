@@ -10,8 +10,7 @@
 <style>
 :root{
   --bg:#0f0e1a;--s1:#181727;--s2:#201f32;--bd:#2c2b44;
-  --tx:#e2ddf0;--dim:#7a768f;--am:#e0a020;
-  --re:#d94040;--gr:#2eb870;
+  --tx:#e2ddf0;--dim:#7a768f;--am:#e0a020;--re:#d94040;--gr:#2eb870;
   --r:12px;--font:'Hiragino Sans','Noto Sans JP',sans-serif;
   --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
 }
@@ -22,7 +21,7 @@ button,input{font-family:var(--font)}
 #app{display:flex;flex-direction:column;height:100dvh}
 #hdr{flex-shrink:0;padding:calc(10px + var(--sat)) 14px 10px;background:var(--bg);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
 #tabs{flex-shrink:0;display:flex;background:var(--bg);border-bottom:1px solid var(--bd)}
-.tab{flex:1;padding:10px 4px;background:none;border:none;color:var(--dim);font-size:13px;border-bottom:2px solid transparent;transition:color .15s;cursor:pointer}
+.tab{flex:1;padding:10px 4px;background:none;border:none;color:var(--dim);font-size:13px;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s}
 .tab.on{color:var(--am);border-bottom-color:var(--am)}
 #scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .pn{display:none;padding:13px 12px calc(32px + var(--sab))}
@@ -35,47 +34,38 @@ button,input{font-family:var(--font)}
 input[type=text]{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:11px 12px;color:var(--tx);font-size:16px;outline:none;transition:border-color .2s;-webkit-appearance:none;width:100%}
 input:focus{border-color:var(--am)}
 .ibtn{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:11px 12px;color:var(--tx);font-size:15px;flex-shrink:0;cursor:pointer}
-.btn{display:block;width:100%;padding:12px;border-radius:var(--r);border:none;font-size:15px;font-weight:700;transition:transform .1s;margin-bottom:8px;cursor:pointer;text-align:center}
+.btn{display:block;width:100%;padding:12px;border-radius:var(--r);border:none;font-size:15px;font-weight:700;margin-bottom:8px;cursor:pointer;text-align:center;transition:transform .1s}
 .btn:active{transform:scale(.96)}
 .btn-p{background:var(--am);color:#0f0e1a}
 .btn-s{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
 .btn-ok{background:var(--gr);color:#0f0e1a}
-/* Progress card */
 .pc{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
-.pc-route{font-size:15px;font-weight:700}
-.pc-cur{font-size:13px;color:var(--am);margin-top:3px}
-.pc-sub{font-size:11px;color:var(--dim);margin-top:2px}
-/* Candidate list */
-.die-row{display:flex;align-items:stretch;gap:10px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,background .15s}
-.die-row:active{background:var(--s2)}
-.die-badge{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;align-self:center}
+/* candidate rows */
+.crow{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;margin-bottom:9px}
+.cbadge{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .d1{background:rgba(217,64,64,.25);color:#ff8080}
 .d2{background:rgba(220,100,20,.25);color:#ffaa60}
 .d3{background:rgba(200,160,0,.25);color:#ffcc40}
 .d4{background:rgba(46,184,112,.25);color:#60eeaa}
 .d5{background:rgba(64,128,224,.25);color:#80b4ff}
 .d6{background:rgba(148,60,240,.25);color:#cc90ff}
-.die-body{flex:1;min-width:0}
-.die-dest{font-size:15px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.die-meta{display:flex;gap:10px;flex-wrap:wrap}
-.die-chip{font-size:12px;color:var(--dim)}
-.die-chip span{color:var(--tx)}
-.die-go{align-self:center;flex-shrink:0;background:var(--am);color:#0f0e1a;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s}
-.die-go:active{transform:scale(.93)}
-/* Loading */
+.cbody{flex:1;min-width:0}
+.cdest{font-size:15px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{font-size:12px;color:var(--dim);line-height:1.7}
+.cmeta b{color:var(--tx);font-weight:500}
+.cgo{flex-shrink:0;background:var(--am);color:#0f0e1a;border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s}
+.cgo:active{transform:scale(.93)}
+/* confirmed */
+.conf{border-left:3px solid var(--am);background:var(--s1);border-radius:0 var(--r) var(--r) 0;border-right:1px solid var(--bd);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:13px;margin-bottom:12px}
+/* log */
+.li{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.lih{display:flex;justify-content:space-between;margin-bottom:2px}
+/* loading */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 16px;gap:14px;color:var(--dim);font-size:14px}
 .sp{width:26px;height:26px;border:3px solid var(--bd);border-top-color:var(--am);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-/* Confirmed */
-.conf{border-left:3px solid var(--am);background:var(--s1);border-radius:0 var(--r) var(--r) 0;border-right:1px solid var(--bd);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:13px;margin-bottom:12px}
-/* Log */
-.li{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
-.lih{display:flex;justify-content:space-between;margin-bottom:3px}
-.lin{font-size:11px;color:var(--dim)}
-/* Done */
 .done{text-align:center;padding:40px 14px}
 .done .big{font-size:52px;margin-bottom:12px}
-/* Toast */
 #toast{position:fixed;bottom:calc(64px + var(--sab));left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);color:var(--tx);padding:9px 20px;border-radius:20px;font-size:13px;border:1px solid var(--bd);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;z-index:99}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -93,15 +83,11 @@ input:focus{border-color:var(--am)}
     <button class="tab" data-t="share" onclick="swTab('share')">📤 共有</button>
   </div>
   <div id="scr">
-
-    <!-- ═══ GAME TAB ═══ -->
     <div id="pn-game" class="pn on">
-
-      <!-- Setup -->
       <div id="st-setup">
         <div class="card">
           <div class="g">
-            <label>出発地（駅名・都市名）</label>
+            <label>出発地</label>
             <div class="row">
               <input type="text" id="orig" placeholder="例: 浜松駅">
               <button class="ibtn" onclick="doGPS()">📍</button>
@@ -114,24 +100,18 @@ input:focus{border-color:var(--am)}
         </div>
         <button class="btn btn-p" onclick="startGame()">🎲 ゲーム開始！</button>
       </div>
-
-      <!-- Dice / Candidates (same screen) -->
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
         <div class="lbl">ダイスを振って選ぶ</div>
         <div id="clist"></div>
         <button class="btn btn-s" style="margin-top:4px" onclick="endGame()">🏁 終了</button>
       </div>
-
-      <!-- Traveling -->
       <div id="st-travel" style="display:none">
         <div id="confwrap"></div>
         <button class="btn btn-ok" onclick="arrive()">📍 到着！次のダイスへ</button>
         <div class="lbl" style="margin-top:14px">これまでの旅路</div>
         <div id="thist"></div>
       </div>
-
-      <!-- Completed -->
       <div id="st-done" style="display:none">
         <div class="done">
           <div class="big">🎉</div>
@@ -140,13 +120,8 @@ input:focus{border-color:var(--am)}
           <button class="btn btn-p" onclick="resetGame()">🎲 新しい旅へ</button>
         </div>
       </div>
-
     </div>
-
-    <!-- ═══ LOG TAB ═══ -->
     <div id="pn-log" class="pn"><div id="logc"></div></div>
-
-    <!-- ═══ SHARE TAB ═══ -->
     <div id="pn-share" class="pn">
       <div class="card">
         <h3 style="margin-bottom:10px">この旅を共有</h3>
@@ -155,334 +130,312 @@ input:focus{border-color:var(--am)}
       </div>
       <div id="shareout"></div>
     </div>
-
   </div>
 </div>
 <script>
 'use strict';
 
-/* ══════════════════════════════════════════════
-   STATIC DATA  フェリー・夜行バス
-   ══════════════════════════════════════════════ */
-// [from_name, from_lat, from_lng, to_name, to_lat, to_lng, 所要時間min, 会社]
-const FERRY_ROUTES = [
-  ['大洗港',36.3163,140.5729,'苫小牧東港',42.6410,141.6590,1080,'商船三井フェリー'],
-  ['仙台港',38.2830,141.0170,'苫小牧港',42.6333,141.6038, 900,'太平洋フェリー'],
-  ['新潟港',37.9170,139.0430,'小樽港',43.2020,141.0040,1080,'新日本海フェリー'],
-  ['敦賀港',35.6500,136.0700,'苫小牧西港',42.6800,141.5800,1200,'新日本海フェリー'],
-  ['舞鶴港',35.4870,135.3760,'小樽港',43.2020,141.0040,1260,'新日本海フェリー'],
-  ['神戸港',34.6760,135.1940,'新門司港',33.9200,130.9300, 720,'阪九フェリー'],
-  ['大阪南港',34.6270,135.4470,'新門司港',33.9200,130.9300, 780,'名門大洋フェリー'],
-  ['東京港',35.6350,139.7750,'苫小牧港',42.6333,141.6038,2400,'川崎近海汽船'],
-  ['東京港',35.6350,139.7750,'徳島港',34.0600,134.5700, 840,'南海フェリー'],
+/* ══════════════════════════════════════════════════════
+   STATIC ROUTES  フェリー・夜行バス
+   （公開APIが存在しないため静的データで管理）
+   [乗り場名, lat, lng, 目的地名, lat, lng, 所要min, 会社名]
+   ══════════════════════════════════════════════════════ */
+const FERRY = [
+  ['大洗港',   36.3163,140.5729, '苫小牧東港',42.6410,141.6590, 1080,'商船三井フェリー'],
+  ['仙台港',   38.2830,141.0170, '苫小牧港',  42.6333,141.6038,  900,'太平洋フェリー'],
+  ['新潟港',   37.9170,139.0430, '小樽港',    43.2020,141.0040, 1080,'新日本海フェリー'],
+  ['敦賀港',   35.6500,136.0700, '苫小牧西港',42.6800,141.5800, 1200,'新日本海フェリー'],
+  ['舞鶴港',   35.4870,135.3760, '小樽港',    43.2020,141.0040, 1260,'新日本海フェリー'],
+  ['神戸港',   34.6760,135.1940, '新門司港',  33.9200,130.9300,  720,'阪九フェリー'],
+  ['大阪南港', 34.6270,135.4470, '新門司港',  33.9200,130.9300,  780,'名門大洋フェリー'],
+  ['東京港',   35.6350,139.7750, '苫小牧港',  42.6333,141.6038, 2400,'川崎近海汽船'],
+  ['東京港',   35.6350,139.7750, '徳島港',    34.0600,134.5700,  840,'南海フェリー'],
+  ['名古屋港', 35.0800,136.8900, '仙台港',    38.2830,141.0170,  960,'太平洋フェリー'],
 ];
-const NIGHT_BUS_ROUTES = [
-  ['浜松駅',34.7108,137.7261,'東京駅',35.6812,139.7671, 210,'遠鉄バス他'],
-  ['浜松駅',34.7108,137.7261,'大阪駅',34.7026,135.4959, 360,'Willer他'],
-  ['名古屋駅',35.1709,136.8815,'東京駅',35.6812,139.7671, 330,'JRバス他'],
-  ['名古屋駅',35.1709,136.8815,'大阪駅',34.7026,135.4959, 180,'名鉄バス他'],
-  ['大阪駅',34.7026,135.4959,'東京駅',35.6812,139.7671, 480,'Willer他'],
-  ['大阪駅',34.7026,135.4959,'仙台駅',38.2682,140.8694, 600,'Willer他'],
-  ['東京駅',35.6812,139.7671,'仙台駅',38.2682,140.8694, 270,'JRバス他'],
-  ['東京駅',35.6812,139.7671,'青森駅',40.8246,140.7400, 480,'JRバス他'],
-  ['東京駅',35.6812,139.7671,'大阪駅',34.7026,135.4959, 480,'Willer他'],
-  ['博多駅',33.5898,130.4201,'大阪駅',34.7026,135.4959, 540,'西鉄バス他'],
-  ['博多駅',33.5898,130.4201,'東京駅',35.6812,139.7671, 780,'Willer他'],
+const NIGHTBUS = [
+  ['浜松駅',  34.7108,137.7261, '東京駅',  35.6812,139.7671,  210,'遠鉄バス他'],
+  ['浜松駅',  34.7108,137.7261, '大阪駅',  34.7026,135.4959,  360,'Willer他'],
+  ['浜松駅',  34.7108,137.7261, '名古屋駅',35.1709,136.8815,   90,'遠鉄バス他'],
+  ['名古屋駅',35.1709,136.8815, '東京駅',  35.6812,139.7671,  330,'JRバス他'],
+  ['名古屋駅',35.1709,136.8815, '大阪駅',  34.7026,135.4959,  180,'名鉄バス他'],
+  ['名古屋駅',35.1709,136.8815, '仙台駅',  38.2682,140.8694,  480,'Willer他'],
+  ['大阪駅',  34.7026,135.4959, '東京駅',  35.6812,139.7671,  480,'Willer他'],
+  ['大阪駅',  34.7026,135.4959, '仙台駅',  38.2682,140.8694,  600,'Willer他'],
+  ['大阪駅',  34.7026,135.4959, '福岡駅',  33.5898,130.4201,  480,'西鉄バス他'],
+  ['東京駅',  35.6812,139.7671, '仙台駅',  38.2682,140.8694,  270,'JRバス他'],
+  ['東京駅',  35.6812,139.7671, '青森駅',  40.8246,140.7400,  480,'JRバス他'],
+  ['東京駅',  35.6812,139.7671, '大阪駅',  34.7026,135.4959,  480,'Willer他'],
+  ['東京駅',  35.6812,139.7671, '名古屋駅',35.1709,136.8815,  330,'JRバス他'],
+  ['博多駅',  33.5898,130.4201, '大阪駅',  34.7026,135.4959,  540,'西鉄バス他'],
+  ['博多駅',  33.5898,130.4201, '東京駅',  35.6812,139.7671,  780,'Willer他'],
+  ['仙台駅',  38.2682,140.8694, '東京駅',  35.6812,139.7671,  270,'JRバス他'],
+  ['仙台駅',  38.2682,140.8694, '大阪駅',  34.7026,135.4959,  600,'Willer他'],
 ];
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    MODE CONFIG
-   ══════════════════════════════════════════════ */
-const MODE_CFG = {
-  // 徒歩・新幹線・飛行機は除外
-  local_bus:    {range:50,   spd:22,  label:'路線バス',   icon:'🚌', fare:(d)=>Math.round((230+d*15)/10)*10},
-  local_train:  {range:150,  spd:42,  label:'在来線(鈍行)',icon:'🚃', fare:(d)=>Math.round((150+d*16.2)/10)*10},
-  express_train:{range:450,  spd:85,  label:'特急',       icon:'🚃', fare:(d)=>Math.round((150+d*16.2+1500)/100)*100},
-  highway_bus:  {range:700,  spd:65,  label:'高速バス',   icon:'🚌', fare:(d)=>Math.round((500+d*4.5)/100)*100},
-  night_bus:    {range:900,  spd:55,  label:'夜行バス',   icon:'🌙', fare:(d)=>Math.round((3000+d*3)/500)*500},
-  ferry:        {range:1500, spd:25,  label:'フェリー',   icon:'⛴',  fare:(d)=>Math.round((3000+d*8)/500)*500},
-  rental_car:   {range:500,  spd:70,  label:'レンタカー', icon:'🚗', fare:(d)=>Math.round((5000+d*25)/500)*500},
+   新幹線・飛行機・徒歩は除外
+   ══════════════════════════════════════════════════════ */
+const MODES = {
+  local_bus:    { spd:22,  label:'路線バス',    icon:'🚌', maxKm:60,
+    fare: d => Math.round((200 + d*14) / 10) * 10 },
+  local_train:  { spd:42,  label:'在来線(鈍行)',icon:'🚃', maxKm:180,
+    fare: d => Math.round((150 + d*16.2) / 10) * 10 },
+  express_train:{ spd:90,  label:'特急',        icon:'🚃', maxKm:500,
+    fare: d => Math.round((150 + d*16.2 + 1800) / 100) * 100 },
+  highway_bus:  { spd:65,  label:'高速バス',    icon:'🚌', maxKm:750,
+    fare: d => Math.round((600 + d*4) / 100) * 100 },
+  rental_car:   { spd:65,  label:'レンタカー',  icon:'🚗', maxKm:600,
+    fare: d => Math.round((5000 + d*20) / 500) * 500 },
+  night_bus:    { spd:55,  label:'夜行バス',    icon:'🌙', maxKm:999,
+    fare: d => Math.round((3000 + d*3) / 500) * 500 },
+  ferry:        { spd:25,  label:'フェリー',    icon:'⛴',  maxKm:9999,
+    fare: d => Math.round((3000 + d*8) / 500) * 500 },
 };
 
+const BOARD = {local_bus:5,local_train:8,express_train:15,highway_bus:15,rental_car:20,night_bus:30,ferry:60};
+
 function calcMins(dist, mode) {
-  const b = {local_bus:5,local_train:8,express_train:15,
-    highway_bus:15,night_bus:30,ferry:60,rental_car:30};
-  return Math.max(3, Math.round(dist / MODE_CFG[mode].spd * 60 + (b[mode]||0)));
-}
-function fmtFare(yen) {
-  return yen === 0 ? '無料' : '約' + yen.toLocaleString() + '円';
+  return Math.max(3, Math.round(dist / MODES[mode].spd * 60 + (BOARD[mode]||0)));
 }
 function fmtMins(m) {
-  if (m < 60) return m + '分';
-  return Math.floor(m/60) + '時間' + (m%60 ? (m%60)+'分' : '');
+  return m < 60 ? m+'分' : Math.floor(m/60)+'時間'+(m%60 ? (m%60)+'分' : '');
+}
+function fmtFare(y) {
+  return y === 0 ? '無料' : '約'+y.toLocaleString()+'円';
 }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    GEO
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 function distKm(a,b){
-  const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLn=(b.lng-a.lng)*Math.PI/180;
-  const x=Math.sin(dLa/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLn/2)**2;
+  const R=6371,φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180,
+    dφ=(b.lat-a.lat)*Math.PI/180,dλ=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-function bearing(from,to){
-  const dLn=(to.lng-from.lng)*Math.PI/180,la1=from.lat*Math.PI/180,la2=to.lat*Math.PI/180;
-  return Math.atan2(Math.sin(dLn)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLn))*180/Math.PI;
+function bearing(a,b){
+  const dL=(b.lng-a.lng)*Math.PI/180,φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180;
+  return Math.atan2(Math.sin(dL)*Math.cos(φ2),Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(dL))*180/Math.PI;
 }
-// angleDiff: 0=目的地方向 180=真逆
-function angleTo(from, to, dest) {
-  const db = bearing(from, dest);
-  const cb = bearing(from, to);
+function angleDiff(from, to, dest) {
+  // 0° = 目的地方向 / 180° = 真逆
+  const db = bearing(from, dest), cb = bearing(from, to);
   return Math.abs(((db - cb + 540) % 360) - 180);
 }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    HEARTRAILS
-   ══════════════════════════════════════════════ */
-const _hrCache = new Map();
-async function fetchNearby(lat, lng, km=250) {
-  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
-  if (_hrCache.has(key)) return _hrCache.get(key);
+   ══════════════════════════════════════════════════════ */
+const _cache = new Map();
+async function fetchNearby(lat, lng) {
+  const k = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  if (_cache.has(k)) return _cache.get(k);
   try {
-    const url = `https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=${km}`;
-    const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))]);
+    const url = `https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=300`;
+    const r = await Promise.race([fetch(url), new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))]);
     if (!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
-    const st = (d?.response?.station||[]).map(s=>({
+    const list = (d?.response?.station || []).map(s=>({
       name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x),
-      line: s.line, pref: s.prefecture,
-      geo_dist: parseFloat(s.geo_distance||0),
-      // 路線名から対応モードを推定（緩め）
-      modes: inferModes(s),
-      src: 'heartrails',
+      line: s.line, geo_dist: parseFloat(s.geo_distance||0),
     }));
-    _hrCache.set(key, st);
-    return st;
+    _cache.set(k, list);
+    return list;
   } catch(e) { console.warn('[fetchNearby]', e.message); return []; }
 }
 
-function inferModes(s) {
-  const line = s.line || '', name = s.name || '';
-  const modes = new Set(['local_train','local_bus','walk']); // 全駅が在来線・バス・徒歩の起点になれる
-  if (/新幹線/.test(line)) modes.add('shinkansen');
-  if (/特急|ライナー|あずさ|しなの|しらさぎ|サンダー|くろしお|南風|しおかぜ|つばめ|ソニック|かもめ|スーパー/.test(line))
-    modes.add('express_train');
-  if (/空港/.test(name) || /空港/.test(line)) { modes.add('domestic_flight'); modes.add('express_train'); }
-  if (/高速/.test(line)) modes.add('highway_bus');
-  return [...modes];
-}
-
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    GEOCODE
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 const GEO_FB = {
   '北海道':{lat:43.0687,lng:141.3508},'札幌':{lat:43.0687,lng:141.3508},
   '函館':{lat:41.7737,lng:140.7268},'旭川':{lat:43.7700,lng:142.3650},
-  '釧路':{lat:42.9849,lng:144.3820},'帯広':{lat:42.9241,lng:143.1966},
-  '青森':{lat:40.8246,lng:140.7400},'仙台':{lat:38.2682,lng:140.8694},
-  '秋田':{lat:39.7196,lng:140.1023},'盛岡':{lat:39.7036,lng:141.1527},
-  '福島':{lat:37.7608,lng:140.4748},'山形':{lat:38.2553,lng:140.3396},
-  '新潟':{lat:37.9127,lng:139.0595},'長野':{lat:36.6448,lng:138.1880},
-  '金沢':{lat:36.5784,lng:136.6481},'富山':{lat:36.7003,lng:137.2133},
-  '東京':{lat:35.6812,lng:139.7671},'新宿':{lat:35.6896,lng:139.7006},
+  '釧路':{lat:42.9849,lng:144.3820},'青森':{lat:40.8246,lng:140.7400},
+  '仙台':{lat:38.2682,lng:140.8694},'秋田':{lat:39.7196,lng:140.1023},
+  '盛岡':{lat:39.7036,lng:141.1527},'新潟':{lat:37.9127,lng:139.0595},
+  '長野':{lat:36.6448,lng:138.1880},'金沢':{lat:36.5784,lng:136.6481},
+  '富山':{lat:36.7003,lng:137.2133},'東京':{lat:35.6812,lng:139.7671},
   '横浜':{lat:35.4657,lng:139.6221},'千葉':{lat:35.6073,lng:140.1063},
-  '大宮':{lat:35.9061,lng:139.6231},'宇都宮':{lat:36.5583,lng:139.8836},
-  '水戸':{lat:36.3418,lng:140.4469},'高崎':{lat:36.3224,lng:139.0036},
+  '大宮':{lat:35.9061,lng:139.6231},'水戸':{lat:36.3418,lng:140.4469},
   '名古屋':{lat:35.1709,lng:136.8815},'浜松':{lat:34.7108,lng:137.7261},
-  '静岡':{lat:34.9769,lng:138.3831},'岐阜':{lat:35.4234,lng:136.7607},
-  '大阪':{lat:34.7026,lng:135.4959},'京都':{lat:34.9850,lng:135.7582},
-  '神戸':{lat:34.6790,lng:135.1950},'奈良':{lat:34.6851,lng:135.8050},
+  '静岡':{lat:34.9769,lng:138.3831},'大阪':{lat:34.7026,lng:135.4959},
+  '京都':{lat:34.9850,lng:135.7582},'神戸':{lat:34.6790,lng:135.1950},
   '広島':{lat:34.3853,lng:132.4553},'岡山':{lat:34.6552,lng:133.9195},
-  '山口':{lat:34.1860,lng:131.4700},'福岡':{lat:33.5904,lng:130.4017},
-  '博多':{lat:33.5898,lng:130.4201},'熊本':{lat:32.7903,lng:130.7460},
-  '鹿児島':{lat:31.5794,lng:130.5571},'長崎':{lat:32.7503,lng:129.8779},
+  '福岡':{lat:33.5904,lng:130.4017},'博多':{lat:33.5898,lng:130.4201},
+  '熊本':{lat:32.7903,lng:130.7460},'鹿児島':{lat:31.5794,lng:130.5571},
   '那覇':{lat:26.2124,lng:127.6809},'沖縄':{lat:26.2124,lng:127.6809},
 };
 async function geocode(text) {
   const q = text.replace(/駅$/,'').trim();
   try {
     const url = `https://express.heartrails.com/api/json?method=getStations&name=${encodeURIComponent(q)}`;
-    const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(),8000))]);
+    const r = await Promise.race([fetch(url), new Promise((_,j)=>setTimeout(()=>j(),8000))]);
     if (r.ok) {
       const d = await r.json();
       const st = d?.response?.station;
-      if (st?.length) return {name:st[0].name+'駅', lat:parseFloat(st[0].y), lng:parseFloat(st[0].x), modes:inferModes(st[0]), src:'heartrails'};
+      if (st?.length) return {name:st[0].name+'駅', lat:parseFloat(st[0].y), lng:parseFloat(st[0].x)};
     }
   } catch(e) { console.warn('[geocode]', e.message); }
   for (const [k,v] of Object.entries(GEO_FB)) {
-    if (text.includes(k)||k.includes(q)) return {name:text, lat:v.lat, lng:v.lng, modes:['local_train','express_train','shinkansen'], src:'fallback'};
+    if (text.includes(k)||k.includes(q)) return {name:text, lat:v.lat, lng:v.lng};
   }
   return null;
 }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    GPS
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 async function doGPS() {
   if (!navigator.geolocation) { toast('GPSが使えません'); return; }
   toast('📍 GPS取得中…');
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    const{latitude:la,longitude:ln}=pos.coords;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const {latitude:la, longitude:ln} = pos.coords;
     try {
       const url = `https://express.heartrails.com/api/json?method=getStations&x=${ln}&y=${la}&distance=5`;
-      const r = await Promise.race([fetch(url),new Promise((_,rej)=>setTimeout(()=>rej(),6000))]);
+      const r = await Promise.race([fetch(url), new Promise((_,j)=>setTimeout(()=>j(),6000))]);
       const d = await r.json();
       const st = d?.response?.station;
-      const name = st?.length ? st[0].name+'駅' : `${la.toFixed(4)},${ln.toFixed(4)}`;
-      document.getElementById('orig').value = name;
-      toast('📍 '+name);
-    } catch { document.getElementById('orig').value=`${la.toFixed(4)},${ln.toFixed(4)}`; toast('📍 座標を取得しました'); }
-  }, ()=>toast('GPS取得に失敗しました'));
+      const nm = st?.length ? st[0].name+'駅' : `${la.toFixed(4)},${ln.toFixed(4)}`;
+      document.getElementById('orig').value = nm; toast('📍 '+nm);
+    } catch { document.getElementById('orig').value=`${la.toFixed(4)},${ln.toFixed(4)}`; toast('📍 座標を取得'); }
+  }, () => toast('GPS取得に失敗しました'));
 }
 
-/* ══════════════════════════════════════════════
-   CANDIDATE GENERATOR
+/* ══════════════════════════════════════════════════════
+   MASTER POOL BUILDER
+   ──────────────────────────────────────────────────────
+   ① Heartrails で現在地から300km圏の全駅を取得
+   ② 各駅 × 全手段（距離レンジ内）でエントリを生成
+   ③ フェリー・夜行バスの静的ルートを追加
+   → これが「その地点から行ける全候補リスト」になる
+   ══════════════════════════════════════════════════════ */
+async function buildMasterPool(from, dest) {
+  const stations = await fetchNearby(from.lat, from.lng);
+  const pool = [];
 
-   ダイス出目ごとの「1候補」を生成する。
-   全6出目を同時に生成し、行き先が被らないよう管理する。
-
-   出目の方向定義:
-   1: 目的地と真逆（angleDiff 最大）
-   2: 逆方向ランダム（angleDiff > 90°）
-   3: 45°ずれランダム（angleDiff 20-70°）
-   4: 30°ずれランダム（angleDiff 10-50°）
-   5: 目的地方向・時間かかる（angleDiff < 90°, mins 多い）
-   6: 目的地方向・快適（angleDiff < 90°, 速度ボーナス）
-
-   帯に入る候補がない場合は段階的に帯を広げてフォールバック。
-   ══════════════════════════════════════════════ */
-
-// すべての候補プールを構築（Heartrails + フェリー + 夜行バス）
-async function buildPool(from, dest) {
-  const pool = []; // {to, mode, dist, mins, fare, angle}
-
-  const stations = await fetchNearby(from.lat, from.lng, 250);
-
-  // 対象モード（徒歩・新幹線・飛行機は除外）
-  const RAIL_MODES = ['local_bus','local_train','express_train','highway_bus','rental_car'];
-
+  // Heartrails駅 × 全手段
   for (const st of stations) {
-    const d = distKm(from, st);
-    if (d < 0.3) continue;
-    const ang = angleTo(from, st, dest);
+    const dist = distKm(from, st);
+    if (dist < 0.3) continue; // 現在地と同じ場所は除外
+    const angle = angleDiff(from, st, dest);
 
-    for (const mode of RAIL_MODES) {
-      const cfg = MODE_CFG[mode];
-      if (d > cfg.range) continue;
-      // 距離レンジのみで判定（st.modes チェックなし）
-      // → どの駅からでも路線バス・在来線・レンタカー等は基本的に利用可能
-      const mins = calcMins(d, mode);
-      const fare = cfg.fare(d);
-      pool.push({to:{name:st.name,lat:st.lat,lng:st.lng,src:'heartrails'}, mode, dist:d, mins, fare, angle:ang});
+    for (const [mode, cfg] of Object.entries(MODES)) {
+      if (mode === 'night_bus' || mode === 'ferry') continue; // 静的データで別途追加
+      if (dist > cfg.maxKm) continue;
+      pool.push({
+        to:    {name:st.name, lat:st.lat, lng:st.lng},
+        mode,  dist, angle,
+        mins:  calcMins(dist, mode),
+        fare:  cfg.fare(dist),
+        note:  null,
+      });
     }
   }
 
-  // フェリー
-  for (const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY_ROUTES) {
-    if (distKm(from, {lat:fla,lng:fln}) > 45) continue;
-    const to = {name:tn, lat:tla, lng:tln, src:'static'};
-    const d = distKm(from, to);
-    const ang = angleTo(from, to, dest);
-    pool.push({to, mode:'ferry', dist:d, mins, fare:MODE_CFG.ferry.fare(d), angle:ang, note:co+' / '+fn+'発'});
+  // フェリー静的ルート
+  for (const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY) {
+    const boardDist = distKm(from, {lat:fla, lng:fln});
+    if (boardDist > 50) continue; // 乗り場まで50km以内
+    const to = {name:tn, lat:tla, lng:tln};
+    const dist = distKm(from, to);
+    const angle = angleDiff(from, to, dest);
+    pool.push({to, mode:'ferry', dist, angle, mins, fare:MODES.ferry.fare(dist), note:`${co}（${fn}発）`});
   }
 
-  // 夜行バス
-  for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHT_BUS_ROUTES) {
-    if (distKm(from, {lat:fla,lng:fln}) > 35) continue;
-    const to = {name:tn, lat:tla, lng:tln, src:'static'};
-    const d = distKm(from, to);
-    const ang = angleTo(from, to, dest);
-    pool.push({to, mode:'night_bus', dist:d, mins, fare:MODE_CFG.night_bus.fare(d), angle:ang, note:co+' / '+fn+'発'});
+  // 夜行バス静的ルート
+  for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHTBUS) {
+    const boardDist = distKm(from, {lat:fla, lng:fln});
+    if (boardDist > 40) continue; // 乗り場まで40km以内
+    const to = {name:tn, lat:tla, lng:tln};
+    const dist = distKm(from, to);
+    const angle = angleDiff(from, to, dest);
+    pool.push({to, mode:'night_bus', dist, angle, mins, fare:MODES.night_bus.fare(dist), note:`${co}（${fn}発）`});
   }
 
+  console.log(`[pool] ${stations.length}駅 → ${pool.length}エントリ`);
   return pool;
 }
 
-// 出目ごとのフィルター（帯定義と優先度）
-// 各エントリ: [最小角度, 最大角度]  帯に入らない場合は次のエントリにフォールバック
-const DIE_BANDS = {
-  1: [[150,180],[120,180],[90,180],[0,180]],   // 真逆→だんだん広げる
-  2: [[90,180],[70,180],[50,180],[0,180]],      // 逆方向
-  3: [[20,70],[10,80],[5,90],[0,180]],          // 45°ずれ
-  4: [[10,50],[5,60],[0,70],[0,180]],           // 30°ずれ
-  5: [[0,90],[0,110],[0,140],[0,180]],          // 前進
-  6: [[0,90],[0,110],[0,140],[0,180]],          // 前進（快適）
+/* ══════════════════════════════════════════════════════
+   CANDIDATE PICKER
+   ──────────────────────────────────────────────────────
+   マスタープールから出目1〜6の条件で1件ずつ選出。
+   全6件の行き先が被らないよう usedDests で管理する。
+
+   出目の方向定義（angleDiff: 0=目的地方向 180=真逆）:
+   1: 真逆方向（angle最大）
+   2: 逆方向ランダム（angle > 90°）
+   3: 45°ずれランダム（angle 20〜70°）
+   4: 30°ずれランダム（angle 10〜50°）
+   5: 前進・時間がかかる手段（angle < 90°, mins優先）
+   6: 前進・快適な手段（angle < 90°, 速い手段優先）
+   ══════════════════════════════════════════════════════ */
+
+// 出目ごとの角度帯（段階的フォールバック付き）
+const BANDS = {
+  1: [[150,180],[120,180],[90,180],[0,180]],
+  2: [[90,180], [70,180], [50,180],[0,180]],
+  3: [[20,70],  [10,80],  [5,90], [0,180]],
+  4: [[10,50],  [5,60],   [0,70], [0,180]],
+  5: [[0,90],   [0,110],  [0,140],[0,180]],
+  6: [[0,90],   [0,110],  [0,140],[0,180]],
 };
 
-// 出目ごとのソート関数
-function sorter(die, from, dest) {
-  return (a, b) => {
-    if (die === 1) return b.angle - a.angle;           // 真逆: angle大きい方が良い
-    if (die === 2) return Math.random() - 0.5;         // 逆走: ランダム
-    if (die === 3) return Math.random() - 0.5;         // 45°: ランダム
-    if (die === 4) return Math.random() - 0.5;         // 30°: ランダム
-    if (die === 5) return b.mins - a.mins;             // 遅い前進: mins多い方が良い
-    if (die === 6) {                                    // 快適前進: 速い手段優先
-      const spd = {express_train:7,highway_bus:6,rental_car:6,night_bus:5,ferry:4,local_train:3,local_bus:2};
-      return (spd[b.mode]||0) - (spd[a.mode]||0);
-    }
-    return 0;
-  };
-}
+// 速い手段ほど高スコア
+const SPEED_RANK = {express_train:6, highway_bus:5, rental_car:5, night_bus:4, ferry:3, local_train:2, local_bus:1};
 
-async function generateAllCandidates(from, dest) {
-  const pool = await buildPool(from, dest);
-  if (pool.length === 0) return [];
+function pickOne(pool, die, usedDests) {
+  for (const [minA, maxA] of BANDS[die]) {
+    // この帯に入る & まだ使われていない行き先
+    let candidates = pool.filter(c => c.angle >= minA && c.angle <= maxA && !usedDests.has(c.to.name));
+    if (candidates.length === 0) continue;
 
-  const results = [];    // 最終結果（6件、被りなし）
-  const usedDest = new Set(); // 使用済み行き先
-
-  for (let die = 1; die <= 6; die++) {
-    const bands = DIE_BANDS[die];
-    let picked = null;
-
-    for (const [minA, maxA] of bands) {
-      // この帯に入る候補でまだ使われていない行き先のもの
-      let filtered = pool.filter(c =>
-        c.angle >= minA && c.angle <= maxA && !usedDest.has(c.to.name)
-      );
-      if (filtered.length === 0) continue;
-
-      // ソートして先頭を採用
-      filtered.sort(sorter(die, from, dest));
-      picked = filtered[0];
-      break;
-    }
-
-    if (!picked) {
-      // 全帯でもヒットしない場合: 未使用の行き先から最も条件に近いものを選ぶ
-      const remaining = pool.filter(c => !usedDest.has(c.to.name));
-      if (remaining.length > 0) {
-        remaining.sort(sorter(die, from, dest));
-        picked = remaining[0];
+    // 出目ごとのソート
+    if (die === 1) {
+      candidates.sort((a,b) => b.angle - a.angle); // 真逆: angle最大
+    } else if (die === 5) {
+      candidates.sort((a,b) => b.mins - a.mins);   // 遅い前進: mins最大
+    } else if (die === 6) {
+      candidates.sort((a,b) => (SPEED_RANK[b.mode]||0) - (SPEED_RANK[a.mode]||0)); // 快適: 速い手段優先
+    } else {
+      // 2,3,4: ランダム（シャッフル）
+      for (let i = candidates.length-1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [candidates[i],candidates[j]] = [candidates[j],candidates[i]];
       }
     }
 
+    return candidates[0];
+  }
+  return null;
+}
+
+function assignAllDice(pool) {
+  const usedDests = new Set();
+  const result = [];
+
+  for (let die = 1; die <= 6; die++) {
+    const picked = pickOne(pool, die, usedDests);
     if (picked) {
-      usedDest.add(picked.to.name);
-      results.push({...picked, dieValue: die});
+      usedDests.add(picked.to.name);
+      result.push({...picked, dieValue: die});
     }
   }
-
-  return results;
+  return result;
 }
 
-function mapsUrl(from, to, mode) {
-  const tm = mode==='walk'?'walking':'transit';
-  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from.name)}&destination=${encodeURIComponent(to.name)}&travelmode=${tm}`;
-}
-
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    STATE
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 let S = null;
-const SK = 'saikoro_v5';
+const SK = 'saikoro_v6';
 function save() { try { S ? localStorage.setItem(SK,JSON.stringify(S)) : localStorage.removeItem(SK); } catch{} }
 function load() { try { const r=localStorage.getItem(SK); if(r) S=JSON.parse(r); } catch{S=null;} }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    GAME LOGIC
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 async function startGame() {
   const on = document.getElementById('orig').value.trim();
   const dn = document.getElementById('dest').value.trim();
@@ -495,15 +448,23 @@ async function startGame() {
     origin, destination:dest, currentLocation:{...origin},
     startedAt:new Date().toISOString(), legs:[], candidates:[]};
   save(); render();
-  await refreshCandidates();
+  await loadCandidates();
 }
 
-async function refreshCandidates() {
+async function loadCandidates() {
   if (!S) return;
   S.status = 'loading'; render();
-  const cands = await generateAllCandidates(S.currentLocation, S.destination);
-  S.candidates = cands;
-  S.status = 'waiting_dice';
+  try {
+    const pool = await buildMasterPool(S.currentLocation, S.destination);
+    S._pool = pool; // デバッグ用
+    S.candidates = assignAllDice(pool);
+    S.status = 'waiting_dice';
+  } catch(e) {
+    console.error('[loadCandidates]', e);
+    toast('候補取得エラー: '+e.message);
+    S.status = 'waiting_dice';
+    S.candidates = [];
+  }
   save(); render();
 }
 
@@ -511,14 +472,8 @@ function selectRoute(dieValue) {
   if (!S || S.status !== 'waiting_dice') return;
   const cand = S.candidates.find(c => c.dieValue === dieValue);
   if (!cand) return;
-  S.legs.push({
-    legNumber: S.legs.length + 1,
-    diceRoll:  dieValue,
-    selected:  cand,
-    status:    'traveling',
-    startedAt: new Date().toISOString(),
-    completedAt: null,
-  });
+  S.legs.push({legNumber:S.legs.length+1, diceRoll:dieValue, selected:cand,
+    status:'traveling', startedAt:new Date().toISOString(), completedAt:null});
   S.status = 'traveling';
   save(); render(); document.getElementById('scr').scrollTop = 0;
 }
@@ -528,9 +483,10 @@ function arrive() {
   const leg = S.legs.at(-1);
   leg.status = 'completed'; leg.completedAt = new Date().toISOString();
   S.currentLocation = {...leg.selected.to};
-  const near = distKm(S.currentLocation, S.destination) < 3;
-  if (near) { S.status = 'completed'; save(); render(); return; }
-  refreshCandidates(); // 次の候補を生成
+  if (distKm(S.currentLocation, S.destination) < 3) {
+    S.status = 'completed'; save(); render(); return;
+  }
+  loadCandidates();
 }
 
 function endGame() {
@@ -538,17 +494,22 @@ function endGame() {
   S = null; save();
   document.getElementById('orig').value = '';
   document.getElementById('dest').value = '';
-  swTab('game');
+  swTab('game'); showSt('setup');
+}
+function resetGame() {
+  S = null; save();
+  document.getElementById('orig').value = '';
+  document.getElementById('dest').value = '';
   showSt('setup');
 }
-function resetGame() { S=null; save(); showSt('setup'); document.getElementById('orig').value=''; document.getElementById('dest').value=''; }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    RENDER
-   ══════════════════════════════════════════════ */
-const ALL_STS = ['setup','dice','travel','done'];
+   ══════════════════════════════════════════════════════ */
 function showSt(id) {
-  ALL_STS.forEach(s=>{const e=document.getElementById('st-'+s);if(e)e.style.display='none';});
+  ['setup','dice','travel','done'].forEach(s=>{
+    const e=document.getElementById('st-'+s); if(e) e.style.display='none';
+  });
   document.getElementById('st-'+id).style.display='block';
 }
 
@@ -559,31 +520,23 @@ function render() {
     showSt('dice');
     renderPc();
     document.getElementById('clist').innerHTML =
-      `<div class="loading"><div class="sp"></div><span>候補を生成中…</span></div>`;
+      `<div class="loading"><div class="sp"></div><span>Heartrailsから駅データ取得中…</span></div>`;
     return;
   }
 
   if (S.status === 'waiting_dice') {
-    showSt('dice');
-    renderPc();
-    renderCandidateList();
-    return;
+    showSt('dice'); renderPc(); renderList(); return;
   }
-
   if (S.status === 'traveling') {
-    showSt('travel');
-    renderTravel();
-    return;
+    showSt('travel'); renderTravel(); return;
   }
-
   if (S.status === 'completed') {
     showSt('done');
     const done = S.legs.filter(l=>l.status==='completed');
     const mins = done.reduce((s,l)=>s+(l.selected?.mins||0),0);
     const fare = done.reduce((s,l)=>s+(l.selected?.fare||0),0);
     document.getElementById('donetxt').textContent =
-      `${S.origin.name} → ${S.destination.name}\n`+
-      `${done.length}レグ・推定${fmtMins(mins)}・合計約${fare.toLocaleString()}円`;
+      `${S.origin.name} → ${S.destination.name}\n${done.length}レグ・推定${fmtMins(mins)}・合計${fmtFare(fare)}`;
   }
 }
 
@@ -591,87 +544,86 @@ function renderPc() {
   const d = Math.round(distKm(S.currentLocation, S.destination));
   const done = S.legs.filter(l=>l.status==='completed').length;
   document.getElementById('pc').innerHTML =
-    `<div class="pc-route">${S.origin.name} → ${S.destination.name}</div>
-     <div class="pc-cur">📍 現在地: ${S.currentLocation.name}</div>
-     <div class="pc-sub">残り約 ${d} km ／ ${done} レグ完了</div>`;
+    `<div style="font-size:15px;font-weight:700">${S.origin.name} → ${S.destination.name}</div>
+     <div style="font-size:13px;color:var(--am);margin-top:3px">📍 現在地: ${S.currentLocation.name}</div>
+     <div style="font-size:11px;color:var(--dim);margin-top:2px">残り約 ${d} km ／ ${done} レグ完了</div>`;
 }
 
-function renderCandidateList() {
+function renderList() {
   const cands = S.candidates || [];
   if (!cands.length) {
     document.getElementById('clist').innerHTML =
-      `<div class="loading"><span>候補が見つかりませんでした</span></div>`;
+      `<div class="loading"><span style="color:var(--re)">候補が見つかりませんでした（Heartrails APIを確認してください）</span></div>`;
     return;
   }
   document.getElementById('clist').innerHTML = cands.map(c => {
-    const mc = MODE_CFG[c.mode];
-    const note = c.note ? `<div class="die-chip" style="width:100%;margin-top:2px;opacity:.7">${c.note}</div>` : '';
-    return `<div class="die-row" onclick="selectRoute(${c.dieValue})">
-      <div class="die-badge d${c.dieValue}">${c.dieValue}</div>
-      <div class="die-body">
-        <div class="die-dest">${mc.icon} ${c.to.name}</div>
-        <div class="die-meta">
-          <div class="die-chip">${mc.label}</div>
-          <div class="die-chip">距離 <span>${Math.round(c.dist*10)/10}km</span></div>
-          <div class="die-chip">時間 <span>${fmtMins(c.mins)}</span></div>
-          <div class="die-chip">金額 <span>${fmtFare(c.fare)}</span></div>
-          ${note}
+    const m = MODES[c.mode];
+    const noteHtml = c.note ? `<div style="font-size:11px;color:var(--dim);opacity:.8">${c.note}</div>` : '';
+    return `<div class="crow">
+      <div class="cbadge d${c.dieValue}">${c.dieValue}</div>
+      <div class="cbody">
+        <div class="cdest">${m.icon} ${c.to.name}</div>
+        <div class="cmeta">
+          ${m.label} ／ <b>${Math.round(c.dist*10)/10}km</b> ／ <b>${fmtMins(c.mins)}</b> ／ <b>${fmtFare(c.fare)}</b>
         </div>
+        ${noteHtml}
       </div>
-      <button class="die-go" onclick="event.stopPropagation();selectRoute(${c.dieValue})">GO</button>
+      <button class="cgo" onclick="selectRoute(${c.dieValue})">GO</button>
     </div>`;
   }).join('');
 }
 
 function renderTravel() {
   const leg = S.legs.at(-1);
-  const c   = leg.selected;
-  const mc  = MODE_CFG[c.mode];
+  const c = leg.selected;
+  const m = MODES[c.mode];
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(S.currentLocation.name)}&destination=${encodeURIComponent(c.to.name)}&travelmode=transit`;
   document.getElementById('confwrap').innerHTML =
     `<div class="conf">
-       <div style="font-size:13px;font-weight:700;margin-bottom:6px">✅ 🎲${leg.diceRoll} 確定</div>
-       <div style="font-size:16px;font-weight:700;margin-bottom:4px">${S.currentLocation.name} → ${c.to.name}</div>
-       <div style="font-size:12px;color:var(--dim);margin-bottom:${c.note?'2':'10'}px">${mc.icon} ${mc.label} ／ ${Math.round(c.dist*10)/10}km ／ ${fmtMins(c.mins)} ／ ${fmtFare(c.fare)}</div>
+       <div style="font-size:13px;font-weight:700;margin-bottom:5px">✅ 🎲${leg.diceRoll} 確定</div>
+       <div style="font-size:16px;font-weight:700;margin-bottom:3px">${S.currentLocation.name} → ${c.to.name}</div>
+       <div style="font-size:12px;color:var(--dim);margin-bottom:${c.note?'3':'10'}px">${m.icon} ${m.label} ／ ${Math.round(c.dist*10)/10}km ／ ${fmtMins(c.mins)} ／ ${fmtFare(c.fare)}</div>
        ${c.note?`<div style="font-size:11px;color:var(--dim);margin-bottom:10px">${c.note}</div>`:''}
-       <a href="${mapsUrl(S.currentLocation,c.to,c.mode)}" target="_blank" rel="noopener"
+       <a href="${mapsUrl}" target="_blank" rel="noopener"
           style="display:block;text-align:center;padding:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px;text-decoration:none">
          🗺 Googleマップで開く →
        </a>
      </div>`;
   const done = S.legs.filter(l=>l.status==='completed');
   document.getElementById('thist').innerHTML = done.length
-    ? [...done].reverse().map(l=>{
-        const r=l.selected; const mc2=MODE_CFG[r.mode];
+    ? [...done].reverse().map(l => {
+        const r=l.selected; const m2=MODES[r.mode];
         return `<div class="li">
-          <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px">🎲${l.diceRoll}</span></div>
-          <div style="font-size:13px">${mc2.icon} → ${r.to.name}（${mc2.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）</div>
+          <div class="lih"><span style="font-size:11px;color:var(--dim)">レグ ${l.legNumber}</span><span style="font-size:13px">🎲${l.diceRoll}</span></div>
+          <div style="font-size:13px">${m2.icon} → ${r.to.name}（${m2.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）</div>
         </div>`;}).join('')
     : `<p style="font-size:13px;color:var(--dim)">まだ完了レグはありません</p>`;
 }
 
-/* ══════════════════════════════════════════════
-   LOG TAB
-   ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   LOG
+   ══════════════════════════════════════════════════════ */
 function renderLog() {
   const el = document.getElementById('logc');
   if (!S||!S.legs.length) { el.innerHTML=`<div style="text-align:center;padding:44px 12px;color:var(--dim)">旅がまだ始まっていません</div>`; return; }
   el.innerHTML = `<p style="font-size:12px;color:var(--dim);margin-bottom:12px">${S.origin.name} → ${S.destination.name}</p>`+
-    [...S.legs].reverse().map(l=>{
-      const r=l.selected; const mc=r?MODE_CFG[r.mode]:null;
+    [...S.legs].reverse().map(l => {
+      const r=l.selected; const m=r?MODES[r.mode]:null;
       return `<div class="li">
-        <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px;font-weight:700">🎲${l.diceRoll}</span></div>
-        <div style="font-size:13px">${mc?`${mc.icon} → ${r.to.name}（${mc.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）`:'選択中…'}</div>
+        <div class="lih"><span style="font-size:11px;color:var(--dim)">レグ ${l.legNumber}</span><span style="font-size:13px;font-weight:700">🎲${l.diceRoll}</span></div>
+        <div style="font-size:13px">${m?`${m.icon} → ${r.to.name}（${m.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）`:'選択中…'}</div>
       </div>`;}).join('');
 }
 
-/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    SHARE
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 function doShare() {
   if (!S) { toast('ゲームが開始されていません'); return; }
-  const d={v:5,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
+  const d={v:6,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
     legs:S.legs.slice(-5).map(l=>({n:l.legNumber,r:l.diceRoll,
-      s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins,fare:l.selected.fare}:null}))};
+      s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,
+        dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins,fare:l.selected.fare}:null}))};
   const url=location.href.split('?')[0]+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(()=>toast('📋 URLをコピーしました')).catch(()=>showShareFb(url));
   else showShareFb(url);
@@ -691,13 +643,13 @@ function swTab(t) {
 
 /* TOAST */
 let _tt;
-function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2800);}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>e.classList.remove('show'),2800);}
 
-/* API check */
+/* API health check */
 async function checkApi() {
   const el = document.getElementById('apistatus');
   try {
-    const r = await Promise.race([fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'), new Promise((_,rej)=>setTimeout(()=>rej(),5000))]);
+    const r = await Promise.race([fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'), new Promise((_,j)=>setTimeout(()=>j(),5000))]);
     el.textContent = r.ok ? 'Heartrails ✅' : 'API ⚠️';
     el.style.color = r.ok ? 'var(--gr)' : 'var(--re)';
   } catch { el.textContent='API ⚠️'; el.style.color='var(--re)'; }
