@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#0f0e1a;--s1:#181727;--s2:#201f32;--bd:#2c2b44;
-  --tx:#e2ddf0;--dim:#7a768f;--am:#e0a020;--abg:rgba(224,160,32,.13);
+  --tx:#e2ddf0;--dim:#7a768f;--am:#e0a020;
   --re:#d94040;--gr:#2eb870;
   --r:12px;--font:'Hiragino Sans','Noto Sans JP',sans-serif;
   --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
@@ -21,12 +21,11 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:15px
 button,input{font-family:var(--font)}
 #app{display:flex;flex-direction:column;height:100dvh}
 #hdr{flex-shrink:0;padding:calc(10px + var(--sat)) 14px 10px;background:var(--bg);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
-#hdr-title{font-size:18px;font-weight:700}
 #tabs{flex-shrink:0;display:flex;background:var(--bg);border-bottom:1px solid var(--bd)}
-.tab{flex:1;padding:10px 4px;background:none;border:none;color:var(--dim);font-size:13px;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;cursor:pointer}
+.tab{flex:1;padding:10px 4px;background:none;border:none;color:var(--dim);font-size:13px;border-bottom:2px solid transparent;transition:color .15s;cursor:pointer}
 .tab.on{color:var(--am);border-bottom-color:var(--am)}
 #scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.pn{display:none;padding:13px 12px calc(28px + var(--sab))}
+.pn{display:none;padding:13px 12px calc(32px + var(--sab))}
 .pn.on{display:block}
 .card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:13px;margin-bottom:12px}
 .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
@@ -41,57 +40,52 @@ input:focus{border-color:var(--am)}
 .btn-p{background:var(--am);color:#0f0e1a}
 .btn-s{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
 .btn-ok{background:var(--gr);color:#0f0e1a}
+/* Progress card */
 .pc{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
 .pc-route{font-size:15px;font-weight:700}
 .pc-cur{font-size:13px;color:var(--am);margin-top:3px}
 .pc-sub{font-size:11px;color:var(--dim);margin-top:2px}
-.dgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.db{aspect-ratio:1;border-radius:10px;border:1.5px solid var(--bd);background:var(--s2);color:var(--tx);font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s,background .1s}
-.db:active{transform:scale(.82);background:var(--bd)}
-.d1{border-color:#7a2020}.d2{border-color:#7a4010}.d3{border-color:#6b5500}
-.d4{border-color:#1a5c2e}.d5{border-color:#1e3e7a}.d6{border-color:#4a1a7a}
-.cbanner{border-radius:var(--r);padding:14px;margin-bottom:12px;text-align:center;border:1px solid var(--bd)}
-.cb-ic{font-size:28px;margin-bottom:2px}.cb-lbl{font-size:20px;font-weight:700}.cb-desc{font-size:12px;opacity:.75;margin-top:2px}
-.c1{background:rgba(217,64,64,.14);border-color:rgba(217,64,64,.3);color:#ff8080}
-.c2{background:rgba(220,90,20,.14);border-color:rgba(220,90,20,.3);color:#ffaa60}
-.c3{background:rgba(200,150,0,.14);border-color:rgba(200,150,0,.3);color:#ffcc40}
-.c4{background:rgba(46,184,112,.14);border-color:rgba(46,184,112,.3);color:#60eeaa}
-.c5{background:rgba(64,128,224,.14);border-color:rgba(64,128,224,.3);color:#80b4ff}
-.c6{background:rgba(140,60,230,.14);border-color:rgba(140,60,230,.3);color:#cc90ff}
-.rc{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:9px}
-.rh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
-.rdest{font-size:16px;font-weight:700}
-.rtime{font-size:12px;color:var(--dim);margin-left:8px;white-space:nowrap;margin-top:3px}
-.rinfo{font-size:12px;color:var(--dim);margin-bottom:9px}
-.rdata{font-size:11px;color:var(--dim);opacity:.7;margin-bottom:6px}
-.ra{display:flex;gap:6px}
-.ra a,.ra button{flex:1;padding:9px 4px;font-size:13px;font-weight:700;border-radius:8px;text-align:center;display:block;text-decoration:none;border:none;cursor:pointer;font-family:var(--font);transition:transform .1s}
-.ra a:active,.ra button:active{transform:scale(.95)}
-.bmap{background:var(--s2);color:var(--tx);border:1px solid var(--bd)!important}
-.bgo{background:var(--am);color:#0f0e1a}
-.conf{border-left:3px solid var(--am);background:var(--s1);border-radius:0 var(--r) var(--r) 0;border-right:1px solid var(--bd);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:13px;margin-bottom:12px}
-.li{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
-.lih{display:flex;justify-content:space-between;margin-bottom:2px}
-.lin{font-size:11px;color:var(--dim)}
-.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;gap:14px;color:var(--dim);font-size:14px}
+/* Candidate list */
+.die-row{display:flex;align-items:stretch;gap:10px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,background .15s}
+.die-row:active{background:var(--s2)}
+.die-badge{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;align-self:center}
+.d1{background:rgba(217,64,64,.25);color:#ff8080}
+.d2{background:rgba(220,100,20,.25);color:#ffaa60}
+.d3{background:rgba(200,160,0,.25);color:#ffcc40}
+.d4{background:rgba(46,184,112,.25);color:#60eeaa}
+.d5{background:rgba(64,128,224,.25);color:#80b4ff}
+.d6{background:rgba(148,60,240,.25);color:#cc90ff}
+.die-body{flex:1;min-width:0}
+.die-dest{font-size:15px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.die-meta{display:flex;gap:10px;flex-wrap:wrap}
+.die-chip{font-size:12px;color:var(--dim)}
+.die-chip span{color:var(--tx)}
+.die-go{align-self:center;flex-shrink:0;background:var(--am);color:#0f0e1a;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s}
+.die-go:active{transform:scale(.93)}
+/* Loading */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 16px;gap:14px;color:var(--dim);font-size:14px}
 .sp{width:26px;height:26px;border:3px solid var(--bd);border-top-color:var(--am);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.em{text-align:center;padding:44px 12px;color:var(--dim)}
+/* Confirmed */
+.conf{border-left:3px solid var(--am);background:var(--s1);border-radius:0 var(--r) var(--r) 0;border-right:1px solid var(--bd);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:13px;margin-bottom:12px}
+/* Log */
+.li{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.lih{display:flex;justify-content:space-between;margin-bottom:3px}
+.lin{font-size:11px;color:var(--dim)}
+/* Done */
 .done{text-align:center;padding:40px 14px}
 .done .big{font-size:52px;margin-bottom:12px}
+/* Toast */
 #toast{position:fixed;bottom:calc(64px + var(--sab));left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);color:var(--tx);padding:9px 20px;border-radius:20px;font-size:13px;border:1px solid var(--bd);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;z-index:99}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.src-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-right:4px;border:1px solid}
-.src-hr{background:rgba(46,184,112,.12);color:var(--gr);border-color:rgba(46,184,112,.35)}
-.src-st{background:rgba(64,128,224,.12);color:#80b4ff;border-color:rgba(64,128,224,.35)}
 </style>
 </head>
 <body>
 <div id="toast"></div>
 <div id="app">
   <div id="hdr">
-    <span id="hdr-title">🎲 サイコロ旅</span>
-    <span id="apistatus" style="font-size:11px;color:var(--dim)">読込中…</span>
+    <span style="font-size:18px;font-weight:700">🎲 サイコロ旅</span>
+    <span id="apistatus" style="font-size:11px;color:var(--dim)">…</span>
   </div>
   <div id="tabs">
     <button class="tab on" data-t="game" onclick="swTab('game')">📍 ゲーム</button>
@@ -99,7 +93,11 @@ input:focus{border-color:var(--am)}
     <button class="tab" data-t="share" onclick="swTab('share')">📤 共有</button>
   </div>
   <div id="scr">
+
+    <!-- ═══ GAME TAB ═══ -->
     <div id="pn-game" class="pn on">
+
+      <!-- Setup -->
       <div id="st-setup">
         <div class="card">
           <div class="g">
@@ -117,21 +115,15 @@ input:focus{border-color:var(--am)}
         <button class="btn btn-p" onclick="startGame()">🎲 ゲーム開始！</button>
       </div>
 
+      <!-- Dice / Candidates (same screen) -->
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
-        <div class="card">
-          <div class="lbl">ダイスを振って番号を押す</div>
-          <div id="dgrid" class="dgrid"></div>
-        </div>
-        <button class="btn btn-s" onclick="endGame()">🏁 終了</button>
-      </div>
-
-      <div id="st-cands" style="display:none">
-        <div id="cban" class="cbanner"></div>
+        <div class="lbl">ダイスを振って選ぶ</div>
         <div id="clist"></div>
-        <button class="btn btn-s mt8" onclick="backToDice()">← 別の出目を選ぶ</button>
+        <button class="btn btn-s" style="margin-top:4px" onclick="endGame()">🏁 終了</button>
       </div>
 
+      <!-- Traveling -->
       <div id="st-travel" style="display:none">
         <div id="confwrap"></div>
         <button class="btn btn-ok" onclick="arrive()">📍 到着！次のダイスへ</button>
@@ -139,6 +131,7 @@ input:focus{border-color:var(--am)}
         <div id="thist"></div>
       </div>
 
+      <!-- Completed -->
       <div id="st-done" style="display:none">
         <div class="done">
           <div class="big">🎉</div>
@@ -147,10 +140,13 @@ input:focus{border-color:var(--am)}
           <button class="btn btn-p" onclick="resetGame()">🎲 新しい旅へ</button>
         </div>
       </div>
+
     </div>
 
+    <!-- ═══ LOG TAB ═══ -->
     <div id="pn-log" class="pn"><div id="logc"></div></div>
 
+    <!-- ═══ SHARE TAB ═══ -->
     <div id="pn-share" class="pn">
       <div class="card">
         <h3 style="margin-bottom:10px">この旅を共有</h3>
@@ -159,209 +155,71 @@ input:focus{border-color:var(--am)}
       </div>
       <div id="shareout"></div>
     </div>
+
   </div>
 </div>
-
 <script>
 'use strict';
 
 /* ══════════════════════════════════════════════
-   STATIC DATA
-   フェリー・夜行バスはオープンAPIが存在しないため
-   主要路線を静的データとして保持する
+   STATIC DATA  フェリー・夜行バス
    ══════════════════════════════════════════════ */
-
-// フェリー主要航路
-// [from_name, from_lat, from_lng, to_name, to_lat, to_lng, 所要時間h, 会社名]
+// [from_name, from_lat, from_lng, to_name, to_lat, to_lng, 所要時間min, 会社]
 const FERRY_ROUTES = [
-  ['大洗港',36.3163,140.5729,'苫小牧東港',42.6410,141.6590,18,'商船三井フェリー'],
-  ['大洗港',36.3163,140.5729,'苫小牧東港',42.6410,141.6590,18,'フェリーさんふらわあ'],
-  ['仙台港',38.2830,141.0170,'苫小牧港',42.6333,141.6038,15,'太平洋フェリー'],
-  ['新潟港',37.9170,139.0430,'小樽港',43.2020,141.0040,18,'新日本海フェリー'],
-  ['敦賀港',35.6500,136.0700,'苫小牧西港',42.6800,141.5800,20,'新日本海フェリー'],
-  ['舞鶴港',35.4870,135.3760,'小樽港',43.2020,141.0040,21,'新日本海フェリー'],
-  ['神戸港',34.6760,135.1940,'新門司港',33.9200,130.9300,12,'阪九フェリー'],
-  ['大阪南港',34.6270,135.4470,'新門司港',33.9200,130.9300,13,'名門大洋フェリー'],
-  ['東京港',35.6350,139.7750,'徳島港',34.0600,134.5700,14,'南海フェリー(徳島)'],
-  ['東京港',35.6350,139.7750,'苫小牧港',42.6333,141.6038,40,'川崎近海汽船'],
+  ['大洗港',36.3163,140.5729,'苫小牧東港',42.6410,141.6590,1080,'商船三井フェリー'],
+  ['仙台港',38.2830,141.0170,'苫小牧港',42.6333,141.6038, 900,'太平洋フェリー'],
+  ['新潟港',37.9170,139.0430,'小樽港',43.2020,141.0040,1080,'新日本海フェリー'],
+  ['敦賀港',35.6500,136.0700,'苫小牧西港',42.6800,141.5800,1200,'新日本海フェリー'],
+  ['舞鶴港',35.4870,135.3760,'小樽港',43.2020,141.0040,1260,'新日本海フェリー'],
+  ['神戸港',34.6760,135.1940,'新門司港',33.9200,130.9300, 720,'阪九フェリー'],
+  ['大阪南港',34.6270,135.4470,'新門司港',33.9200,130.9300, 780,'名門大洋フェリー'],
+  ['東京港',35.6350,139.7750,'苫小牧港',42.6333,141.6038,2400,'川崎近海汽船'],
+  ['東京港',35.6350,139.7750,'徳島港',34.0600,134.5700, 840,'南海フェリー'],
 ];
-
-// 夜行バス主要路線
-// [from_name, from_lat, from_lng, to_name, to_lat, to_lng, 所要時間min, 会社例]
 const NIGHT_BUS_ROUTES = [
-  ['浜松駅',34.7108,137.7261,'東京駅',35.6812,139.7671,210,'遠鉄バス他'],
-  ['浜松駅',34.7108,137.7261,'大阪駅',34.7026,135.4959,360,'Willer他'],
-  ['名古屋駅',35.1709,136.8815,'東京駅',35.6812,139.7671,330,'JRバス他'],
-  ['名古屋駅',35.1709,136.8815,'大阪駅',34.7026,135.4959,180,'名鉄バス他'],
-  ['大阪駅',34.7026,135.4959,'東京駅',35.6812,139.7671,480,'Willer他'],
-  ['大阪駅',34.7026,135.4959,'仙台駅',38.2682,140.8694,600,'Willer他'],
-  ['東京駅',35.6812,139.7671,'仙台駅',38.2682,140.8694,270,'JRバス他'],
-  ['東京駅',35.6812,139.7671,'盛岡駅',39.7036,141.1527,360,'JRバス他'],
-  ['東京駅',35.6812,139.7671,'青森駅',40.8246,140.7400,480,'JRバス他'],
-  ['博多駅',33.5898,130.4201,'大阪駅',34.7026,135.4959,540,'西鉄バス他'],
-  ['博多駅',33.5898,130.4201,'熊本駅',32.7903,130.7460,120,'九州産交他'],
-  ['福岡空港',33.5857,130.4505,'長崎駅',32.7503,129.8779,150,'昭和バス他'],
+  ['浜松駅',34.7108,137.7261,'東京駅',35.6812,139.7671, 210,'遠鉄バス他'],
+  ['浜松駅',34.7108,137.7261,'大阪駅',34.7026,135.4959, 360,'Willer他'],
+  ['名古屋駅',35.1709,136.8815,'東京駅',35.6812,139.7671, 330,'JRバス他'],
+  ['名古屋駅',35.1709,136.8815,'大阪駅',34.7026,135.4959, 180,'名鉄バス他'],
+  ['大阪駅',34.7026,135.4959,'東京駅',35.6812,139.7671, 480,'Willer他'],
+  ['大阪駅',34.7026,135.4959,'仙台駅',38.2682,140.8694, 600,'Willer他'],
+  ['東京駅',35.6812,139.7671,'仙台駅',38.2682,140.8694, 270,'JRバス他'],
+  ['東京駅',35.6812,139.7671,'青森駅',40.8246,140.7400, 480,'JRバス他'],
+  ['東京駅',35.6812,139.7671,'大阪駅',34.7026,135.4959, 480,'Willer他'],
+  ['博多駅',33.5898,130.4201,'大阪駅',34.7026,135.4959, 540,'西鉄バス他'],
+  ['博多駅',33.5898,130.4201,'東京駅',35.6812,139.7671, 780,'Willer他'],
 ];
 
 /* ══════════════════════════════════════════════
-   DICE DEFINITIONS
+   MODE CONFIG
    ══════════════════════════════════════════════ */
-const DICE_DEF = {
-  1:{label:'最悪',   desc:'徒歩・超ローカルのみ',     icon:'💀',strategy:'detour',
-     modes:['walk','local_bus']},
-  2:{label:'低速',   desc:'在来線・路線バス中心',      icon:'🐢',strategy:'slow',
-     modes:['walk','local_bus','local_train']},
-  3:{label:'通常',   desc:'特急・高速バス・フェリーも', icon:'🎯',strategy:'normal',
-     modes:['local_train','express_train','ferry','local_bus','night_bus']},
-  4:{label:'高速',   desc:'新幹線・高速バス・夜行も',  icon:'🚄',strategy:'fast',
-     modes:['express_train','shinkansen','highway_bus','night_bus','ferry']},
-  5:{label:'最速',   desc:'新幹線・飛行機優先',        icon:'⚡',strategy:'fastest',
-     modes:['shinkansen','domestic_flight','highway_bus']},
-  6:{label:'直行',   desc:'飛行機・新幹線のみ',        icon:'✈️',strategy:'direct',
-     modes:['shinkansen','domestic_flight']},
+const MODE_CFG = {
+  walk:            {range:5,    spd:4,   label:'徒歩',     icon:'🚶', fare:(d)=>0},
+  local_bus:       {range:40,   spd:22,  label:'路線バス', icon:'🚌', fare:(d)=>Math.round((230+d*15)/10)*10},
+  local_train:     {range:120,  spd:42,  label:'在来線',   icon:'🚃', fare:(d)=>Math.round((150+d*16.2)/10)*10},
+  express_train:   {range:400,  spd:85,  label:'特急',     icon:'🚃', fare:(d)=>Math.round((150+d*16.2+1500)/100)*100},
+  shinkansen:      {range:1400, spd:230, label:'新幹線',   icon:'🚄', fare:(d)=>Math.round((1500+d*22)/100)*100},
+  highway_bus:     {range:700,  spd:65,  label:'高速バス', icon:'🚌', fare:(d)=>Math.round((500+d*4.5)/100)*100},
+  night_bus:       {range:900,  spd:60,  label:'夜行バス', icon:'🌙', fare:(d)=>Math.round((3000+d*3)/500)*500},
+  ferry:           {range:1500, spd:25,  label:'フェリー', icon:'⛴',  fare:(d)=>Math.round((3000+d*8)/500)*500},
+  domestic_flight: {range:2000, spd:400, label:'飛行機',   icon:'✈️', fare:(d)=>Math.round((8000+d*5)/1000)*1000},
 };
 
-const MODE_CONFIG = {
-  walk:            {range:4,    spd:4,   label:'徒歩',        icon:'🚶',rf:[],    rt:[]},
-  local_bus:       {range:35,   spd:22,  label:'路線バス',    icon:'🚌',rf:[],    rt:[]},
-  local_train:     {range:100,  spd:42,  label:'在来線',      icon:'🚃',rf:['L'], rt:['L']},
-  express_train:   {range:350,  spd:80,  label:'特急・快速',  icon:'🚃',rf:['E'], rt:['E']},
-  shinkansen:      {range:1200, spd:220, label:'新幹線',      icon:'🚄',rf:['S'], rt:['S']},
-  highway_bus:     {range:650,  spd:62,  label:'高速バス',    icon:'🚌',rf:['B'], rt:['B']},
-  night_bus:       {range:800,  spd:55,  label:'夜行バス',    icon:'🌙',rf:[],    rt:[]},
-  ferry:           {range:1000, spd:25,  label:'フェリー',    icon:'⛴', rf:['F'], rt:['F']},
-  domestic_flight: {range:2000, spd:380, label:'国内線',      icon:'✈️',rf:['A'], rt:['A']},
-};
-
-/* ══════════════════════════════════════════════
-   HEARTRAILS DATA LAYER
-   GitHub Pages = HTTPS = CORSが通る
-   ══════════════════════════════════════════════ */
-const _hrCache = new Map();
-
-async function fetchNearby(lat, lng, km = 200) {
-  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
-  if (_hrCache.has(key)) return _hrCache.get(key);
-  try {
-    const url = `https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=${km}`;
-    const r = await Promise.race([
-      fetch(url),
-      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 10000))
-    ]);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    const stations = (d?.response?.station || []).map(s => ({
-      id:   's_' + s.name.replace(/\s/g,'') + '_' + s.line.slice(0,4),
-      name: s.name + '駅',
-      base: s.name,
-      lat:  parseFloat(s.y),
-      lng:  parseFloat(s.x),
-      line: s.line,
-      pref: s.prefecture,
-      dist: parseFloat(s.geo_distance || 0),
-      m:    inferModes(s),
-      src:  'heartrails',
-    }));
-    _hrCache.set(key, stations);
-    return stations;
-  } catch(e) {
-    console.warn('[fetchNearby]', e.message);
-    return [];
-  }
+function calcMins(dist, mode) {
+  const b = {walk:0,local_bus:5,local_train:8,express_train:15,
+    shinkansen:20,highway_bus:15,night_bus:30,ferry:60,domestic_flight:90};
+  return Math.max(3, Math.round(dist / MODE_CFG[mode].spd * 60 + (b[mode]||0)));
 }
-
-// 路線名から乗り換えタイプを推定
-function inferModes(s) {
-  const line = s.line || '';
-  const m = ['L']; // 在来線は基本あり
-  if (/新幹線/.test(line))                        m.push('S');
-  if (/特急|ライナー|あずさ|しらさぎ|サンダー|しおかぜ|南風|つばめ|ソニック|かもめ/.test(line)) m.push('E');
-  if (/空港/.test(s.name))                        m.push('A');
-  if (s.name.includes('空港') || line.includes('空港')) m.push('A');
-  return m.join('');
+function fmtFare(yen) {
+  return yen === 0 ? '無料' : '約' + yen.toLocaleString() + '円';
+}
+function fmtMins(m) {
+  if (m < 60) return m + '分';
+  return Math.floor(m/60) + '時間' + (m%60 ? (m%60)+'分' : '');
 }
 
 /* ══════════════════════════════════════════════
-   GEOCODE  (Heartrails 駅名検索)
-   ══════════════════════════════════════════════ */
-const GEO_FALLBACK = {
-  '北海道':'sapporo','札幌':{lat:43.0687,lng:141.3508},'函館':{lat:41.7737,lng:140.7268},
-  '旭川':{lat:43.7700,lng:142.3650},'釧路':{lat:42.9849,lng:144.3820},
-  '青森':{lat:40.8246,lng:140.7400},'仙台':{lat:38.2682,lng:140.8694},
-  '秋田':{lat:39.7196,lng:140.1023},'盛岡':{lat:39.7036,lng:141.1527},
-  '東京':{lat:35.6812,lng:139.7671},'新宿':{lat:35.6896,lng:139.7006},
-  '横浜':{lat:35.4657,lng:139.6221},'名古屋':{lat:35.1709,lng:136.8815},
-  '浜松':{lat:34.7108,lng:137.7261},'静岡':{lat:34.9769,lng:138.3831},
-  '大阪':{lat:34.7026,lng:135.4959},'京都':{lat:34.9850,lng:135.7582},
-  '神戸':{lat:34.6790,lng:135.1950},'広島':{lat:34.3853,lng:132.4553},
-  '岡山':{lat:34.6552,lng:133.9195},'福岡':{lat:33.5904,lng:130.4017},
-  '博多':{lat:33.5898,lng:130.4201},'熊本':{lat:32.7903,lng:130.7460},
-  '鹿児島':{lat:31.5794,lng:130.5571},'那覇':{lat:26.2124,lng:127.6809},
-  '金沢':{lat:36.5784,lng:136.6481},'富山':{lat:36.7003,lng:137.2133},
-  '新潟':{lat:37.9127,lng:139.0595},'長野':{lat:36.6448,lng:138.1880},
-};
-const SAPPORO_COORD = {lat:43.0687,lng:141.3508};
-
-async function geocode(text) {
-  const q = text.replace(/駅$/,'').trim();
-
-  // Heartrails 駅名検索
-  try {
-    const url = `https://express.heartrails.com/api/json?method=getStations&name=${encodeURIComponent(q)}`;
-    const r = await Promise.race([
-      fetch(url),
-      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-    ]);
-    if (r.ok) {
-      const d = await r.json();
-      const st = d?.response?.station;
-      if (st?.length) {
-        const s = st[0];
-        return {
-          id:   'gc_'+s.name, name: s.name+'駅',
-          lat:  parseFloat(s.y), lng: parseFloat(s.x),
-          line: s.line, m: inferModes(s), src:'heartrails'
-        };
-      }
-    }
-  } catch(e) { console.warn('[geocode]', e.message); }
-
-  // フォールバック
-  for (const [key, val] of Object.entries(GEO_FALLBACK)) {
-    if (text.includes(key) || key.includes(q)) {
-      const coord = typeof val === 'string' ? SAPPORO_COORD : val;
-      return {id:'fb_'+key, name:text, lat:coord.lat, lng:coord.lng, m:'EL', src:'fallback'};
-    }
-  }
-  return null;
-}
-
-/* ══════════════════════════════════════════════
-   GPS
-   ══════════════════════════════════════════════ */
-async function doGPS() {
-  if (!navigator.geolocation) { toast('GPSが使えません'); return; }
-  toast('📍 GPS取得中…');
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const {latitude:la, longitude:ln} = pos.coords;
-    try {
-      const url = `https://express.heartrails.com/api/json?method=getStations&x=${ln}&y=${la}&distance=5`;
-      const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(),6000))]);
-      const d = await r.json();
-      const st = d?.response?.station;
-      if (st?.length) {
-        document.getElementById('orig').value = st[0].name + '駅';
-        toast('📍 ' + st[0].name + '駅');
-      } else {
-        document.getElementById('orig').value = `${la.toFixed(4)},${ln.toFixed(4)}`;
-        toast('📍 座標を取得しました');
-      }
-    } catch { document.getElementById('orig').value = `${la.toFixed(4)},${ln.toFixed(4)}`; toast('📍 座標を取得しました'); }
-  }, () => toast('GPS取得に失敗しました'));
-}
-
-/* ══════════════════════════════════════════════
-   GEO UTILS
+   GEO
    ══════════════════════════════════════════════ */
 function distKm(a,b){
   const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLn=(b.lng-a.lng)*Math.PI/180;
@@ -372,116 +230,254 @@ function bearing(from,to){
   const dLn=(to.lng-from.lng)*Math.PI/180,la1=from.lat*Math.PI/180,la2=to.lat*Math.PI/180;
   return Math.atan2(Math.sin(dLn)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLn))*180/Math.PI;
 }
-function dirAlign(b1,b2){ return Math.cos(((b1-b2+540)%360-180)*Math.PI/180); }
+// angleDiff: 0=目的地方向 180=真逆
+function angleTo(from, to, dest) {
+  const db = bearing(from, dest);
+  const cb = bearing(from, to);
+  return Math.abs(((db - cb + 540) % 360) - 180);
+}
 
 /* ══════════════════════════════════════════════
-   ROUTE GENERATOR
+   HEARTRAILS
    ══════════════════════════════════════════════ */
-function calcMins(dist, mode) {
-  const board = {walk:0,local_bus:5,local_train:8,express_train:12,
-    shinkansen:18,highway_bus:10,night_bus:20,ferry:60,domestic_flight:90};
-  return Math.max(3, Math.round(dist / MODE_CONFIG[mode].spd * 60 + (board[mode]||0)));
-}
-function mapsUrl(from, to, mode) {
-  const tmode = mode === 'walk' ? 'walking' : mode === 'domestic_flight' ? 'flying' : 'transit';
-  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from.name)}&destination=${encodeURIComponent(to.name)}&travelmode=${tmode === 'flying' ? 'transit' : tmode}`;
-}
-function canConnect(fromM, toM, mode) {
-  const cfg = MODE_CONFIG[mode];
-  return cfg.rf.every(c => (fromM||'').includes(c)) && cfg.rt.every(c => (toM||'').includes(c));
+const _hrCache = new Map();
+async function fetchNearby(lat, lng, km=250) {
+  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  if (_hrCache.has(key)) return _hrCache.get(key);
+  try {
+    const url = `https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=${km}`;
+    const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))]);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    const st = (d?.response?.station||[]).map(s=>({
+      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x),
+      line: s.line, pref: s.prefecture,
+      geo_dist: parseFloat(s.geo_distance||0),
+      // 路線名から対応モードを推定（緩め）
+      modes: inferModes(s),
+      src: 'heartrails',
+    }));
+    _hrCache.set(key, st);
+    return st;
+  } catch(e) { console.warn('[fetchNearby]', e.message); return []; }
 }
 
-function scoreCandidate(from, to, dist, mode, strategy, dest) {
-  const totalDist = distKm(from, dest);
-  const destBrg   = bearing(from, dest);
-  const candBrg   = bearing(from, to);
-  const dir   = dirAlign(destBrg, candBrg);
-  const prog  = totalDist > 0 ? (totalDist - distKm(to, dest)) / totalDist : 0;
-  const noise = Math.random() * 15;
-  switch (strategy) {
-    case 'detour':  return dir < -0.8 ? -Infinity : (1-dir)*55 + dist*0.3 + noise;
-    case 'slow':    return -dist*0.3 + (1-dir)*12 + noise;
-    case 'normal':  return dir*38 + Math.min(dist,200)*0.1 + noise;
-    case 'fast':    return dir*52 + dist*0.2 + noise;
-    case 'fastest': return prog*85 + dir*15 + noise*0.5;
-    case 'direct':  return prog*95 + dir*10 + noise*0.3;
-    default:        return dir*40 + noise;
+function inferModes(s) {
+  const line = s.line || '', name = s.name || '';
+  const modes = new Set(['local_train','local_bus','walk']); // 全駅が在来線・バス・徒歩の起点になれる
+  if (/新幹線/.test(line)) modes.add('shinkansen');
+  if (/特急|ライナー|あずさ|しなの|しらさぎ|サンダー|くろしお|南風|しおかぜ|つばめ|ソニック|かもめ|スーパー/.test(line))
+    modes.add('express_train');
+  if (/空港/.test(name) || /空港/.test(line)) { modes.add('domestic_flight'); modes.add('express_train'); }
+  if (/高速/.test(line)) modes.add('highway_bus');
+  return [...modes];
+}
+
+/* ══════════════════════════════════════════════
+   GEOCODE
+   ══════════════════════════════════════════════ */
+const GEO_FB = {
+  '北海道':{lat:43.0687,lng:141.3508},'札幌':{lat:43.0687,lng:141.3508},
+  '函館':{lat:41.7737,lng:140.7268},'旭川':{lat:43.7700,lng:142.3650},
+  '釧路':{lat:42.9849,lng:144.3820},'帯広':{lat:42.9241,lng:143.1966},
+  '青森':{lat:40.8246,lng:140.7400},'仙台':{lat:38.2682,lng:140.8694},
+  '秋田':{lat:39.7196,lng:140.1023},'盛岡':{lat:39.7036,lng:141.1527},
+  '福島':{lat:37.7608,lng:140.4748},'山形':{lat:38.2553,lng:140.3396},
+  '新潟':{lat:37.9127,lng:139.0595},'長野':{lat:36.6448,lng:138.1880},
+  '金沢':{lat:36.5784,lng:136.6481},'富山':{lat:36.7003,lng:137.2133},
+  '東京':{lat:35.6812,lng:139.7671},'新宿':{lat:35.6896,lng:139.7006},
+  '横浜':{lat:35.4657,lng:139.6221},'千葉':{lat:35.6073,lng:140.1063},
+  '大宮':{lat:35.9061,lng:139.6231},'宇都宮':{lat:36.5583,lng:139.8836},
+  '水戸':{lat:36.3418,lng:140.4469},'高崎':{lat:36.3224,lng:139.0036},
+  '名古屋':{lat:35.1709,lng:136.8815},'浜松':{lat:34.7108,lng:137.7261},
+  '静岡':{lat:34.9769,lng:138.3831},'岐阜':{lat:35.4234,lng:136.7607},
+  '大阪':{lat:34.7026,lng:135.4959},'京都':{lat:34.9850,lng:135.7582},
+  '神戸':{lat:34.6790,lng:135.1950},'奈良':{lat:34.6851,lng:135.8050},
+  '広島':{lat:34.3853,lng:132.4553},'岡山':{lat:34.6552,lng:133.9195},
+  '山口':{lat:34.1860,lng:131.4700},'福岡':{lat:33.5904,lng:130.4017},
+  '博多':{lat:33.5898,lng:130.4201},'熊本':{lat:32.7903,lng:130.7460},
+  '鹿児島':{lat:31.5794,lng:130.5571},'長崎':{lat:32.7503,lng:129.8779},
+  '那覇':{lat:26.2124,lng:127.6809},'沖縄':{lat:26.2124,lng:127.6809},
+};
+async function geocode(text) {
+  const q = text.replace(/駅$/,'').trim();
+  try {
+    const url = `https://express.heartrails.com/api/json?method=getStations&name=${encodeURIComponent(q)}`;
+    const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(),8000))]);
+    if (r.ok) {
+      const d = await r.json();
+      const st = d?.response?.station;
+      if (st?.length) return {name:st[0].name+'駅', lat:parseFloat(st[0].y), lng:parseFloat(st[0].x), modes:inferModes(st[0]), src:'heartrails'};
+    }
+  } catch(e) { console.warn('[geocode]', e.message); }
+  for (const [k,v] of Object.entries(GEO_FB)) {
+    if (text.includes(k)||k.includes(q)) return {name:text, lat:v.lat, lng:v.lng, modes:['local_train','express_train','shinkansen'], src:'fallback'};
   }
+  return null;
 }
 
-async function getCandidates(from, dest, dieValue) {
-  const def     = DICE_DEF[dieValue];
-  const modes   = def.modes;
-  const results = [];
+/* ══════════════════════════════════════════════
+   GPS
+   ══════════════════════════════════════════════ */
+async function doGPS() {
+  if (!navigator.geolocation) { toast('GPSが使えません'); return; }
+  toast('📍 GPS取得中…');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const{latitude:la,longitude:ln}=pos.coords;
+    try {
+      const url = `https://express.heartrails.com/api/json?method=getStations&x=${ln}&y=${la}&distance=5`;
+      const r = await Promise.race([fetch(url),new Promise((_,rej)=>setTimeout(()=>rej(),6000))]);
+      const d = await r.json();
+      const st = d?.response?.station;
+      const name = st?.length ? st[0].name+'駅' : `${la.toFixed(4)},${ln.toFixed(4)}`;
+      document.getElementById('orig').value = name;
+      toast('📍 '+name);
+    } catch { document.getElementById('orig').value=`${la.toFixed(4)},${ln.toFixed(4)}`; toast('📍 座標を取得しました'); }
+  }, ()=>toast('GPS取得に失敗しました'));
+}
 
-  // ── 1. Heartrails 実在駅 ──────────────────────────────
-  const hrStations = await fetchNearby(from.lat, from.lng, 250);
-  for (const st of hrStations) {
-    if (distKm(from, st) < 0.3) continue; // 同じ場所を除外
-    for (const mode of modes) {
-      if (!['walk','local_bus','local_train','express_train','shinkansen','highway_bus'].includes(mode)) continue;
-      const cfg = MODE_CONFIG[mode];
-      const d   = distKm(from, st);
+/* ══════════════════════════════════════════════
+   CANDIDATE GENERATOR
+
+   ダイス出目ごとの「1候補」を生成する。
+   全6出目を同時に生成し、行き先が被らないよう管理する。
+
+   出目の方向定義:
+   1: 目的地と真逆（angleDiff 最大）
+   2: 逆方向ランダム（angleDiff > 90°）
+   3: 45°ずれランダム（angleDiff 20-70°）
+   4: 30°ずれランダム（angleDiff 10-50°）
+   5: 目的地方向・時間かかる（angleDiff < 90°, mins 多い）
+   6: 目的地方向・快適（angleDiff < 90°, 速度ボーナス）
+
+   帯に入る候補がない場合は段階的に帯を広げてフォールバック。
+   ══════════════════════════════════════════════ */
+
+// すべての候補プールを構築（Heartrails + フェリー + 夜行バス）
+async function buildPool(from, dest) {
+  const pool = []; // {to, mode, dist, mins, fare, angle}
+
+  const stations = await fetchNearby(from.lat, from.lng, 250);
+
+  for (const st of stations) {
+    const d = distKm(from, st);
+    if (d < 0.3) continue;
+    const ang = angleTo(from, st, dest);
+
+    // その駅に対して使える全モードを試みる
+    for (const mode of ['walk','local_bus','local_train','express_train','shinkansen','highway_bus']) {
+      const cfg = MODE_CFG[mode];
       if (d > cfg.range) continue;
-      if (!canConnect(from.m||'EL', st.m, mode)) continue;
-      const score = scoreCandidate(from, st, d, mode, def.strategy, dest);
-      if (!isFinite(score) || score <= -Infinity) continue;
-      results.push({to:st, mode, dist:d, mins:calcMins(d,mode), score, src:'heartrails'});
+      // モード適合チェック（緩め: 駅が対応モードを持つかどうか）
+      if (!st.modes.includes(mode)) continue;
+      const mins = calcMins(d, mode);
+      const fare = cfg.fare(d);
+      pool.push({to:{name:st.name,lat:st.lat,lng:st.lng,src:'heartrails'}, mode, dist:d, mins, fare, angle:ang});
     }
   }
 
-  // ── 2. フェリー静的データ ────────────────────────────
-  if (modes.includes('ferry')) {
-    for (const [fn,fla,fln,tn,tla,tln,h,co] of FERRY_ROUTES) {
-      const ferryFrom = {name:fn, lat:fla, lng:fln, m:'F'};
-      const ferryTo   = {id:'ferry_'+tn, name:tn, lat:tla, lng:tln, m:'F', src:'static'};
-      const dFrom = distKm(from, ferryFrom);
-      if (dFrom > 40) continue; // 乗り場まで40km以内
-      const score = scoreCandidate(from, ferryTo, distKm(from, ferryTo), 'ferry', def.strategy, dest);
-      if (!isFinite(score) || score <= -Infinity) continue;
-      results.push({to:ferryTo, mode:'ferry', dist:distKm(from,ferryTo),
-        mins:h*60, score, src:'static', note:`${co} / ${fn}発`});
+  // フェリー
+  for (const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY_ROUTES) {
+    if (distKm(from, {lat:fla,lng:fln}) > 45) continue;
+    const to = {name:tn, lat:tla, lng:tln, src:'static'};
+    const d = distKm(from, to);
+    const ang = angleTo(from, to, dest);
+    pool.push({to, mode:'ferry', dist:d, mins, fare:MODE_CFG.ferry.fare(d), angle:ang, note:co+' / '+fn+'発'});
+  }
+
+  // 夜行バス
+  for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHT_BUS_ROUTES) {
+    if (distKm(from, {lat:fla,lng:fln}) > 35) continue;
+    const to = {name:tn, lat:tla, lng:tln, src:'static'};
+    const d = distKm(from, to);
+    const ang = angleTo(from, to, dest);
+    pool.push({to, mode:'night_bus', dist:d, mins, fare:MODE_CFG.night_bus.fare(d), angle:ang, note:co+' / '+fn+'発'});
+  }
+
+  return pool;
+}
+
+// 出目ごとのフィルター（帯定義と優先度）
+// 各エントリ: [最小角度, 最大角度]  帯に入らない場合は次のエントリにフォールバック
+const DIE_BANDS = {
+  1: [[150,180],[120,180],[90,180],[0,180]],   // 真逆→だんだん広げる
+  2: [[90,180],[70,180],[50,180],[0,180]],      // 逆方向
+  3: [[20,70],[10,80],[5,90],[0,180]],          // 45°ずれ
+  4: [[10,50],[5,60],[0,70],[0,180]],           // 30°ずれ
+  5: [[0,90],[0,110],[0,140],[0,180]],          // 前進
+  6: [[0,90],[0,110],[0,140],[0,180]],          // 前進（快適）
+};
+
+// 出目ごとのソート関数
+function sorter(die, from, dest) {
+  return (a, b) => {
+    if (die === 1) return b.angle - a.angle;           // 真逆: angle大きい方が良い
+    if (die === 2) return Math.random() - 0.5;         // 逆走: ランダム
+    if (die === 3) return Math.random() - 0.5;         // 45°: ランダム
+    if (die === 4) return Math.random() - 0.5;         // 30°: ランダム
+    if (die === 5) return b.mins - a.mins;             // 遅い前進: mins多い方が良い
+    if (die === 6) {                                    // 快適前進: 速い手段優先
+      const spd = {domestic_flight:9,shinkansen:8,express_train:7,highway_bus:6,night_bus:5,ferry:4,local_train:3,local_bus:2,walk:1};
+      return (spd[b.mode]||0) - (spd[a.mode]||0);
+    }
+    return 0;
+  };
+}
+
+async function generateAllCandidates(from, dest) {
+  const pool = await buildPool(from, dest);
+  if (pool.length === 0) return [];
+
+  const results = [];    // 最終結果（6件、被りなし）
+  const usedDest = new Set(); // 使用済み行き先
+
+  for (let die = 1; die <= 6; die++) {
+    const bands = DIE_BANDS[die];
+    let picked = null;
+
+    for (const [minA, maxA] of bands) {
+      // この帯に入る候補でまだ使われていない行き先のもの
+      let filtered = pool.filter(c =>
+        c.angle >= minA && c.angle <= maxA && !usedDest.has(c.to.name)
+      );
+      if (filtered.length === 0) continue;
+
+      // ソートして先頭を採用
+      filtered.sort(sorter(die, from, dest));
+      picked = filtered[0];
+      break;
+    }
+
+    if (!picked) {
+      // 全帯でもヒットしない場合: 未使用の行き先から最も条件に近いものを選ぶ
+      const remaining = pool.filter(c => !usedDest.has(c.to.name));
+      if (remaining.length > 0) {
+        remaining.sort(sorter(die, from, dest));
+        picked = remaining[0];
+      }
+    }
+
+    if (picked) {
+      usedDest.add(picked.to.name);
+      results.push({...picked, dieValue: die});
     }
   }
 
-  // ── 3. 夜行バス静的データ ────────────────────────────
-  if (modes.includes('night_bus')) {
-    for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHT_BUS_ROUTES) {
-      const nbFrom = {name:fn, lat:fla, lng:fln};
-      const nbTo   = {id:'nb_'+tn, name:tn, lat:tla, lng:tln, m:'BL', src:'static'};
-      const dFrom  = distKm(from, nbFrom);
-      if (dFrom > 30) continue;
-      const score = scoreCandidate(from, nbTo, distKm(from, nbTo), 'night_bus', def.strategy, dest);
-      if (!isFinite(score) || score <= -Infinity) continue;
-      results.push({to:nbTo, mode:'night_bus', dist:distKm(from,nbTo),
-        mins, score, src:'static', note:`${co} / ${fn}発`});
-    }
-  }
+  return results;
+}
 
-  // 同一目的地は最良scoreだけ残す → 上位8件
-  const best = new Map();
-  for (const c of results) {
-    const key = c.to.name;
-    if (!best.has(key) || c.score > best.get(key).score) best.set(key, c);
-  }
-  return [...best.values()]
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 8)
-    .map((c,i) => ({...c, index:i, googleMapsUrl:mapsUrl(from, c.to, c.mode)}));
+function mapsUrl(from, to, mode) {
+  const tm = mode==='walk'?'walking':'transit';
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from.name)}&destination=${encodeURIComponent(to.name)}&travelmode=${tm}`;
 }
 
 /* ══════════════════════════════════════════════
    STATE
    ══════════════════════════════════════════════ */
 let S = null;
-const SK = 'saikoro_v4';
-function save() { try { S ? localStorage.setItem(SK, JSON.stringify(S)) : localStorage.removeItem(SK); } catch {} }
-function load() {
-  try {
-    const r = localStorage.getItem(SK);
-    if (r) S = JSON.parse(r);
-  } catch { S = null; }
-}
+const SK = 'saikoro_v5';
+function save() { try { S ? localStorage.setItem(SK,JSON.stringify(S)) : localStorage.removeItem(SK); } catch{} }
+function load() { try { const r=localStorage.getItem(SK); if(r) S=JSON.parse(r); } catch{S=null;} }
 
 /* ══════════════════════════════════════════════
    GAME LOGIC
@@ -489,43 +485,39 @@ function load() {
 async function startGame() {
   const on = document.getElementById('orig').value.trim();
   const dn = document.getElementById('dest').value.trim();
-  if (!on || !dn) { toast('出発地と目的地を入力してください'); return; }
+  if (!on||!dn) { toast('出発地と目的地を入力してください'); return; }
   toast('🔍 場所を検索中…');
   const [origin, dest] = await Promise.all([geocode(on), geocode(dn)]);
   if (!origin) { toast(`「${on}」が見つかりません`); return; }
   if (!dest)   { toast(`「${dn}」が見つかりません`); return; }
-  S = {id:'s'+Date.now().toString(36), status:'waiting_dice',
+  S = {id:'s'+Date.now().toString(36), status:'loading',
     origin, destination:dest, currentLocation:{...origin},
-    startedAt:new Date().toISOString(), legs:[]};
-  save(); render(); toast('🎲 ゲーム開始！');
+    startedAt:new Date().toISOString(), legs:[], candidates:[]};
+  save(); render();
+  await refreshCandidates();
 }
 
-async function rollDice(v) {
-  if (!S || S.status !== 'waiting_dice') return;
-  S.status = 'loading'; render();
-  try {
-    const cands = await getCandidates(S.currentLocation, S.destination, v);
-    S.legs.push({legNumber:S.legs.length+1, diceRoll:v, def:DICE_DEF[v],
-      candidates:cands, selected:null, status:'selecting', startedAt:new Date().toISOString()});
-    S.status = 'showing_candidates';
-  } catch(e) {
-    console.error(e); toast('エラー: '+e.message);
-    S.status = 'waiting_dice';
-  }
-  save(); render(); document.getElementById('scr').scrollTop = 0;
-}
-
-function backToDice() {
+async function refreshCandidates() {
   if (!S) return;
-  if (S.legs.at(-1)?.status === 'selecting') S.legs.pop();
-  S.status = 'waiting_dice'; save(); render();
+  S.status = 'loading'; render();
+  const cands = await generateAllCandidates(S.currentLocation, S.destination);
+  S.candidates = cands;
+  S.status = 'waiting_dice';
+  save(); render();
 }
 
-function selectRoute(i) {
-  if (!S || S.status !== 'showing_candidates') return;
-  const leg = S.legs.at(-1);
-  leg.selected = leg.candidates[i];
-  leg.status = 'traveling';
+function selectRoute(dieValue) {
+  if (!S || S.status !== 'waiting_dice') return;
+  const cand = S.candidates.find(c => c.dieValue === dieValue);
+  if (!cand) return;
+  S.legs.push({
+    legNumber: S.legs.length + 1,
+    diceRoll:  dieValue,
+    selected:  cand,
+    status:    'traveling',
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+  });
   S.status = 'traveling';
   save(); render(); document.getElementById('scr').scrollTop = 0;
 }
@@ -536,45 +528,66 @@ function arrive() {
   leg.status = 'completed'; leg.completedAt = new Date().toISOString();
   S.currentLocation = {...leg.selected.to};
   const near = distKm(S.currentLocation, S.destination) < 3;
-  S.status = near ? 'completed' : 'waiting_dice';
-  save(); render(); document.getElementById('scr').scrollTop = 0;
+  if (near) { S.status = 'completed'; save(); render(); return; }
+  refreshCandidates(); // 次の候補を生成
 }
 
-function endGame()   { if (!confirm('ゲームを終了しますか？')) return; S=null; save(); render(); }
-function resetGame() { S=null; save(); render(); }
+function endGame() {
+  if (!confirm('ゲームを終了しますか？')) return;
+  S = null; save();
+  document.getElementById('orig').value = '';
+  document.getElementById('dest').value = '';
+  swTab('game');
+  showSt('setup');
+}
+function resetGame() { S=null; save(); showSt('setup'); document.getElementById('orig').value=''; document.getElementById('dest').value=''; }
 
 /* ══════════════════════════════════════════════
    RENDER
    ══════════════════════════════════════════════ */
-const ALL_STS = ['setup','dice','cands','travel','done'];
+const ALL_STS = ['setup','dice','travel','done'];
 function showSt(id) {
-  ALL_STS.forEach(s => {const e=document.getElementById('st-'+s);if(e)e.style.display='none';});
-  document.getElementById('st-'+id).style.display = 'block';
+  ALL_STS.forEach(s=>{const e=document.getElementById('st-'+s);if(e)e.style.display='none';});
+  document.getElementById('st-'+id).style.display='block';
 }
 
 function render() {
   if (!S) { showSt('setup'); return; }
 
   if (S.status === 'loading') {
-    showSt('dice'); renderPc();
-    document.getElementById('dgrid').innerHTML =
-      `<div style="grid-column:1/-1" class="loading"><div class="sp"></div><span>Heartrailsから駅データ取得中…</span></div>`;
+    showSt('dice');
+    renderPc();
+    document.getElementById('clist').innerHTML =
+      `<div class="loading"><div class="sp"></div><span>候補を生成中…</span></div>`;
     return;
   }
-  if (S.status === 'waiting_dice')       { showSt('dice');   renderPc(); renderDiceGrid(); return; }
-  if (S.status === 'showing_candidates') { showSt('cands');  renderCands(); return; }
-  if (S.status === 'traveling')          { showSt('travel'); renderTravel(); return; }
+
+  if (S.status === 'waiting_dice') {
+    showSt('dice');
+    renderPc();
+    renderCandidateList();
+    return;
+  }
+
+  if (S.status === 'traveling') {
+    showSt('travel');
+    renderTravel();
+    return;
+  }
+
   if (S.status === 'completed') {
     showSt('done');
     const done = S.legs.filter(l=>l.status==='completed');
     const mins = done.reduce((s,l)=>s+(l.selected?.mins||0),0);
+    const fare = done.reduce((s,l)=>s+(l.selected?.fare||0),0);
     document.getElementById('donetxt').textContent =
-      `${S.origin.name}から${S.destination.name}まで\n${done.length}レグ・推定${Math.round(mins/60)}時間の旅でした！`;
+      `${S.origin.name} → ${S.destination.name}\n`+
+      `${done.length}レグ・推定${fmtMins(mins)}・合計約${fare.toLocaleString()}円`;
   }
 }
 
 function renderPc() {
-  const d    = Math.round(distKm(S.currentLocation, S.destination));
+  const d = Math.round(distKm(S.currentLocation, S.destination));
   const done = S.legs.filter(l=>l.status==='completed').length;
   document.getElementById('pc').innerHTML =
     `<div class="pc-route">${S.origin.name} → ${S.destination.name}</div>
@@ -582,65 +595,55 @@ function renderPc() {
      <div class="pc-sub">残り約 ${d} km ／ ${done} レグ完了</div>`;
 }
 
-function renderDiceGrid() {
-  document.getElementById('dgrid').innerHTML =
-    Object.entries(DICE_DEF).map(([v,d])=>
-      `<button class="db d${v}" onclick="rollDice(${v})" title="${d.label}: ${d.desc}">${v}</button>`
-    ).join('');
-}
-
-function renderCands() {
-  const leg = S.legs.at(-1);
-  const def = leg.def;
-  const bn  = document.getElementById('cban');
-  bn.className = `cbanner c${leg.diceRoll}`;
-  bn.innerHTML = `<div class="cb-ic">${def.icon}</div><div class="cb-lbl">🎲 ${leg.diceRoll} — ${def.label}</div><div class="cb-desc">${def.desc}</div>`;
-
-  const cl = document.getElementById('clist');
-  if (!leg.candidates.length) {
-    cl.innerHTML = `<div class="em"><p>この出目では候補が見つかりませんでした</p><p style="font-size:12px;margin-top:6px">← に戻って別の出目を選んでください</p></div>`;
+function renderCandidateList() {
+  const cands = S.candidates || [];
+  if (!cands.length) {
+    document.getElementById('clist').innerHTML =
+      `<div class="loading"><span>候補が見つかりませんでした</span></div>`;
     return;
   }
-  cl.innerHTML = leg.candidates.map((c,i) => {
-    const mc  = MODE_CONFIG[c.mode];
-    const src = c.src==='heartrails'
-      ? `<span class="src-badge src-hr">Heartrails</span>`
-      : `<span class="src-badge src-st">静的データ</span>`;
-    const note = c.note ? `<div class="rdata">${c.note}</div>` : '';
-    return `<div class="rc">
-      <div class="rh">
-        <div class="rdest">${mc.icon} ${c.to.name}</div>
-        <div class="rtime">約${c.mins}分</div>
+  document.getElementById('clist').innerHTML = cands.map(c => {
+    const mc = MODE_CFG[c.mode];
+    const note = c.note ? `<div class="die-chip" style="width:100%;margin-top:2px;opacity:.7">${c.note}</div>` : '';
+    return `<div class="die-row" onclick="selectRoute(${c.dieValue})">
+      <div class="die-badge d${c.dieValue}">${c.dieValue}</div>
+      <div class="die-body">
+        <div class="die-dest">${mc.icon} ${c.to.name}</div>
+        <div class="die-meta">
+          <div class="die-chip">${mc.label}</div>
+          <div class="die-chip">距離 <span>${Math.round(c.dist*10)/10}km</span></div>
+          <div class="die-chip">時間 <span>${fmtMins(c.mins)}</span></div>
+          <div class="die-chip">金額 <span>${fmtFare(c.fare)}</span></div>
+          ${note}
+        </div>
       </div>
-      <div class="rinfo">${src}${mc.label} ／ ${Math.round(c.dist*10)/10} km</div>
-      ${note}
-      <div class="ra">
-        <a href="${c.googleMapsUrl}" target="_blank" rel="noopener" class="bmap">🗺 マップ</a>
-        <button class="bgo" onclick="selectRoute(${i})">これで行く！</button>
-      </div>
+      <button class="die-go" onclick="event.stopPropagation();selectRoute(${c.dieValue})">GO</button>
     </div>`;
   }).join('');
 }
 
 function renderTravel() {
   const leg = S.legs.at(-1);
-  const r   = leg.selected;
-  const mc  = MODE_CONFIG[r.mode];
+  const c   = leg.selected;
+  const mc  = MODE_CFG[c.mode];
   document.getElementById('confwrap').innerHTML =
     `<div class="conf">
-       <div style="font-size:13px;font-weight:700;margin-bottom:5px">✅ レグ ${leg.legNumber} 確定</div>
-       <div style="font-size:15px;margin-bottom:3px">${S.currentLocation.name} → ${r.to.name}</div>
-       <div style="font-size:12px;color:var(--dim);margin-bottom:${r.note?'4':'10'}px">${mc.icon} ${mc.label} ／ ${Math.round(r.dist*10)/10} km ／ 約${r.mins}分</div>
-       ${r.note ? `<div style="font-size:11px;color:var(--dim);margin-bottom:10px">${r.note}</div>` : ''}
-       <a href="${r.googleMapsUrl}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px;text-decoration:none">🗺 Googleマップで開く →</a>
+       <div style="font-size:13px;font-weight:700;margin-bottom:6px">✅ 🎲${leg.diceRoll} 確定</div>
+       <div style="font-size:16px;font-weight:700;margin-bottom:4px">${S.currentLocation.name} → ${c.to.name}</div>
+       <div style="font-size:12px;color:var(--dim);margin-bottom:${c.note?'2':'10'}px">${mc.icon} ${mc.label} ／ ${Math.round(c.dist*10)/10}km ／ ${fmtMins(c.mins)} ／ ${fmtFare(c.fare)}</div>
+       ${c.note?`<div style="font-size:11px;color:var(--dim);margin-bottom:10px">${c.note}</div>`:''}
+       <a href="${mapsUrl(S.currentLocation,c.to,c.mode)}" target="_blank" rel="noopener"
+          style="display:block;text-align:center;padding:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px;text-decoration:none">
+         🗺 Googleマップで開く →
+       </a>
      </div>`;
   const done = S.legs.filter(l=>l.status==='completed');
   document.getElementById('thist').innerHTML = done.length
-    ? [...done].reverse().map(l => {
-        const r2=l.selected; const mc2=MODE_CONFIG[r2.mode];
+    ? [...done].reverse().map(l=>{
+        const r=l.selected; const mc2=MODE_CFG[r.mode];
         return `<div class="li">
-          <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px">${l.def.icon} 🎲${l.diceRoll}</span></div>
-          <div style="font-size:13px">${mc2.icon} → ${r2.to.name}（${mc2.label}・${Math.round(r2.dist*10)/10}km・約${r2.mins}分）</div>
+          <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px">🎲${l.diceRoll}</span></div>
+          <div style="font-size:13px">${mc2.icon} → ${r.to.name}（${mc2.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）</div>
         </div>`;}).join('')
     : `<p style="font-size:13px;color:var(--dim)">まだ完了レグはありません</p>`;
 }
@@ -650,18 +653,14 @@ function renderTravel() {
    ══════════════════════════════════════════════ */
 function renderLog() {
   const el = document.getElementById('logc');
-  if (!S || !S.legs.length) {
-    el.innerHTML = `<div class="em"><p>旅がまだ始まっていません</p></div>`; return;
-  }
-  el.innerHTML = `<p style="font-size:12px;color:var(--dim);margin-bottom:12px">${S.origin.name} → ${S.destination.name}</p>` +
-    [...S.legs].reverse().map(l => {
-      const r  = l.selected;
-      const mc = r ? MODE_CONFIG[r.mode] : null;
+  if (!S||!S.legs.length) { el.innerHTML=`<div style="text-align:center;padding:44px 12px;color:var(--dim)">旅がまだ始まっていません</div>`; return; }
+  el.innerHTML = `<p style="font-size:12px;color:var(--dim);margin-bottom:12px">${S.origin.name} → ${S.destination.name}</p>`+
+    [...S.legs].reverse().map(l=>{
+      const r=l.selected; const mc=r?MODE_CFG[r.mode]:null;
       return `<div class="li">
-        <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px;font-weight:700">${l.def.icon} 🎲${l.diceRoll} ${l.def.label}</span></div>
-        <div style="font-size:13px">${mc ? `${mc.icon} → ${r.to.name}（${mc.label}・${Math.round(r.dist*10)/10}km・約${r.mins}分）` : '選択中…'}</div>
-      </div>`;
-    }).join('');
+        <div class="lih"><span class="lin">レグ ${l.legNumber}</span><span style="font-size:13px;font-weight:700">🎲${l.diceRoll}</span></div>
+        <div style="font-size:13px">${mc?`${mc.icon} → ${r.to.name}（${mc.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）`:'選択中…'}</div>
+      </div>`;}).join('');
 }
 
 /* ══════════════════════════════════════════════
@@ -669,18 +668,15 @@ function renderLog() {
    ══════════════════════════════════════════════ */
 function doShare() {
   if (!S) { toast('ゲームが開始されていません'); return; }
-  const d = {v:4, on:S.origin.name, dn:S.destination.name,
-    cn:S.currentLocation.name, cl:{lat:S.currentLocation.lat,lng:S.currentLocation.lng},
+  const d={v:5,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
     legs:S.legs.slice(-5).map(l=>({n:l.legNumber,r:l.diceRoll,
-      s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins}:null,
-      st:l.status}))};
-  const url = location.href.split('?')[0]+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(url).then(()=>toast('📋 URLをコピーしました')).catch(()=>showShareFb(url));
-  } else showShareFb(url);
+      s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins,fare:l.selected.fare}:null}))};
+  const url=location.href.split('?')[0]+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(()=>toast('📋 URLをコピーしました')).catch(()=>showShareFb(url));
+  else showShareFb(url);
 }
 function showShareFb(url) {
-  document.getElementById('shareout').innerHTML = `<div class="card"><div class="lbl">共有URL</div><p style="font-size:11px;word-break:break-all;line-height:1.7;color:var(--dim)">${url}</p></div>`;
+  document.getElementById('shareout').innerHTML=`<div class="card"><div class="lbl">共有URL</div><p style="font-size:11px;word-break:break-all;line-height:1.7;color:var(--dim)">${url}</p></div>`;
 }
 
 /* TAB NAV */
@@ -694,21 +690,15 @@ function swTab(t) {
 
 /* TOAST */
 let _tt;
-function toast(msg) {
-  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
-  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800);
-}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2800);}
 
-/* API status check */
+/* API check */
 async function checkApi() {
   const el = document.getElementById('apistatus');
   try {
-    const r = await Promise.race([
-      fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'),
-      new Promise((_,rej)=>setTimeout(()=>rej(),5000))
-    ]);
-    if (r.ok) { el.textContent='Heartrails ✅'; el.style.color='var(--gr)'; }
-    else throw new Error();
+    const r = await Promise.race([fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'), new Promise((_,rej)=>setTimeout(()=>rej(),5000))]);
+    el.textContent = r.ok ? 'Heartrails ✅' : 'API ⚠️';
+    el.style.color = r.ok ? 'var(--gr)' : 'var(--re)';
   } catch { el.textContent='API ⚠️'; el.style.color='var(--re)'; }
 }
 
