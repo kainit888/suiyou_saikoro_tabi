@@ -106,7 +106,7 @@ input:focus{border-color:var(--am)}
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
         <div id="time-info" style="font-size:11px;color:var(--dim);margin-bottom:8px;text-align:right"></div>
-        <details id="debug-wrap" style="margin-bottom:10px">
+        <details id="debug-wrap" open style="margin-bottom:10px">
           <summary style="font-size:11px;color:var(--dim);cursor:pointer;user-select:none">🔍 デバッグログ（タップで展開）</summary>
           <div id="debug-log" style="font-size:10px;color:var(--dim);background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;margin-top:6px;max-height:220px;overflow-y:auto;font-family:monospace;line-height:1.7;white-space:pre-wrap;word-break:break-all"></div>
         </details>
@@ -265,28 +265,57 @@ async function fetchNearby(lat, lng, km=150){
   }catch(e){dbg(`fetchNearby ERROR: ${e.message}`);return [];}
 }
 
-// 3地点から並行取得して重複除去したリストを返す
+// 4方向のアンカーポイントから並行取得して重複除去したリストを返す
+//
+// 問題: 目的地方向の中間点だけを叩くと「逆方向」の駅が全く取れない
+//       → prog < 0 の候補がゼロになり 🎲1〜3 が埋まらない
+//
+// 解決: 4方向を叩く
+//   ① 出発地付近 (半径120km) — 近距離・全方向
+//   ② 目的地方向 1/3地点 (半径150km) — 前進候補
+//   ③ 目的地方向 2/3地点 (半径150km) — 遠距離前進候補
+//   ④ 目的地の逆方向 250km地点 (半径150km) — 逆走候補 (prog < 0)
 async function fetchAll(from, dest){
-  const mid1 = {
-    lat: from.lat+(dest.lat-from.lat)*0.33,
-    lng: from.lng+(dest.lng-from.lng)*0.33,
+  // 目的地方向の単位ベクトル
+  const dLat = dest.lat - from.lat;
+  const dLng = dest.lng - from.lng;
+  const norm = Math.sqrt(dLat*dLat + dLng*dLng);
+  const uLat = dLat/norm, uLng = dLng/norm;
+
+  // 逆方向 250km (度換算: 1度≒111km)
+  const backDist = 2.25; // 250km ÷ 111km/deg
+  const back = {
+    lat: from.lat - uLat * backDist,
+    lng: from.lng - uLng * backDist,
   };
-  const mid2 = {
-    lat: from.lat+(dest.lat-from.lat)*0.67,
-    lng: from.lng+(dest.lng-from.lng)*0.67,
+  const fwd1 = {
+    lat: from.lat + (dest.lat-from.lat)*0.33,
+    lng: from.lng + (dest.lng-from.lng)*0.33,
   };
-  const [s1,s2,s3] = await Promise.all([
-    fetchNearby(from.lat, from.lng, 150),
-    fetchNearby(mid1.lat, mid1.lng, 200),
-    fetchNearby(mid2.lat, mid2.lng, 200),
+  const fwd2 = {
+    lat: from.lat + (dest.lat-from.lat)*0.67,
+    lng: from.lng + (dest.lng-from.lng)*0.67,
+  };
+
+  dbg(`fetchAll 4方向クエリ開始...`);
+  dbg(`  ① 出発地付近 (${from.lat.toFixed(2)},${from.lng.toFixed(2)}) r=120km`);
+  dbg(`  ② 前進1/3  (${fwd1.lat.toFixed(2)},${fwd1.lng.toFixed(2)}) r=150km`);
+  dbg(`  ③ 前進2/3  (${fwd2.lat.toFixed(2)},${fwd2.lng.toFixed(2)}) r=150km`);
+  dbg(`  ④ 逆方向   (${back.lat.toFixed(2)},${back.lng.toFixed(2)}) r=150km`);
+
+  const [s1,s2,s3,s4] = await Promise.all([
+    fetchNearby(from.lat, from.lng, 120),
+    fetchNearby(fwd1.lat, fwd1.lng, 150),
+    fetchNearby(fwd2.lat, fwd2.lng, 150),
+    fetchNearby(back.lat, back.lng, 150),
   ]);
-  // 重複除去（駅名ベース）
+
   const seen = new Set();
   const all = [];
-  for(const st of [...s1,...s2,...s3]){
+  for(const st of [...s1,...s2,...s3,...s4]){
     if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
   }
-  dbg(`fetchAll: near=${s1.length} mid1=${s2.length} mid2=${s3.length} → 合計${all.length}駅`);
+  dbg(`fetchAll: near=${s1.length} fwd1=${s2.length} fwd2=${s3.length} back=${s4.length} → 合計${all.length}駅`);
   return all;
 }
 
