@@ -1,59 +1,4 @@
-/* ══════════════════════════════════════════════════════
-   HEARTRAILS  路線ベースAPI
-   ──────────────────────────────────────────────────────
-   水曜どうでしょう方式:
-   「今いる駅から出ている路線の終着駅まで全部リストする」
-   → その中からダイス6択を選ぶ
-
-   使うAPIエンドポイント:
-   ① getStations?name=xxx  → 駅名から路線名を取得
-   ② getStations?line=xxx  → 路線名から全駅リストを取得
-   ③ getStations?x=&y=&distance= → 座標検索（フォールバック用）
-   ══════════════════════════════════════════════════════ */
-const _cache = new Map();
-
-async function hrFetch(params) {
-  const url = `https://express.heartrails.com/api/json?${params}`;
-  const k = params;
-  if (_cache.has(k)) return _cache.get(k);
-  try {
-    const r = await Promise.race([
-      fetch(url),
-      new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))
-    ]);
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    const d = await r.json();
-    const list = (d?.response?.station||[]).map(s=>({
-      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x), line: s.line,
-    }));
-    _cache.set(k, list);
-    return list;
-  } catch(e) { dbg('hrFetch ERR('+params+'): '+e.message); return []; }
-}
-
-// 駅名から路線一覧を取得
-async function fetchByName(stationBase) {
-  return hrFetch(`method=getStations&name=${encodeURIComponent(stationBase)}`);
-}
-
-// 路線名から全駅を取得
-async function fetchByLine(line) {
-  return hrFetch(`method=getStations&line=${encodeURIComponent(line)}`);
-}
-
-// 座標から近隣駅を取得（フォールバック・GPS用）
-async function fetchNearby(lat, lng, km=150) {
-  return hrFetch(`method=getStations&x=${lng}&y=${lat}&distance=${km}`);
-}
-
-// 距離に応じた最適手段（1〜2種類）
-function getModesForDist(d) {
-  if (d <=  40) return ['local_bus'];
-  if (d <= 100) return ['local_train'];
-  if (d <= 250) return ['local_train','express_train'];
-  if (d <= 600) return ['express_train','highway_bus'];
-  return ['express_train'];
-}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -93,7 +38,7 @@ input:focus{border-color:var(--am)}
 .btn-p{background:var(--am);color:#0f0e1a}
 .btn-s{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
 .btn-ok{background:var(--gr);color:#0f0e1a}
-.pc{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.pc{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
 .crow{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;margin-bottom:9px}
 .cbadge{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0}
 .d1{background:rgba(217,64,64,.28);color:#ff8080}
@@ -121,6 +66,7 @@ input:focus{border-color:var(--am)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .hint{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:12px}
 .hint b{color:var(--am)}
+#debug-log{font-size:10px;color:var(--dim);background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;margin-top:6px;max-height:220px;overflow-y:auto;font-family:monospace;line-height:1.7;white-space:pre-wrap;word-break:break-all}
 </style>
 </head>
 <body>
@@ -160,10 +106,10 @@ input:focus{border-color:var(--am)}
 
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
-        <div id="time-info" style="font-size:11px;color:var(--dim);margin-bottom:8px;text-align:right"></div>
-        <details id="debug-wrap" open style="margin-bottom:10px">
-          <summary style="font-size:11px;color:var(--dim);cursor:pointer;user-select:none">🔍 デバッグログ（タップで展開）</summary>
-          <div id="debug-log" style="font-size:10px;color:var(--dim);background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;margin-top:6px;max-height:220px;overflow-y:auto;font-family:monospace;line-height:1.7;white-space:pre-wrap;word-break:break-all"></div>
+        <div id="time-info" style="font-size:11px;color:var(--dim);margin-bottom:6px;text-align:right"></div>
+        <details id="dbg-wrap" open style="margin-bottom:10px">
+          <summary style="font-size:11px;color:var(--dim);cursor:pointer;user-select:none">🔍 デバッグログ</summary>
+          <div id="debug-log"></div>
         </details>
         <div id="clist"></div>
         <button class="btn btn-s" style="margin-top:4px" onclick="endGame()">🏁 終了</button>
@@ -197,13 +143,13 @@ input:focus{border-color:var(--am)}
     </div>
   </div>
 </div>
+
 <script>
 'use strict';
 
-/* ══════════════════════════════════════════════════════
-   STATIC ROUTES
-   ══════════════════════════════════════════════════════ */
-// [乗り場名, lat, lng, 目的地名, lat, lng, 所要min, 会社]
+/* ═══════════════════════════════════════════════════════
+   STATIC DATA  フェリー・夜行バス（公開APIなし・静的管理）
+   ═══════════════════════════════════════════════════════ */
 const FERRY = [
   ['大洗港',   36.3163,140.5729,'苫小牧東港',42.6410,141.6590,1080,'商船三井フェリー'],
   ['仙台港',   38.2830,141.0170,'苫小牧港',  42.6333,141.6038, 900,'太平洋フェリー'],
@@ -216,7 +162,6 @@ const FERRY = [
   ['東京港',   35.6350,139.7750,'徳島港',    34.0600,134.5700, 840,'南海フェリー'],
   ['名古屋港', 35.0800,136.8900,'仙台港',    38.2830,141.0170, 960,'太平洋フェリー'],
 ];
-// 夜行バスは20:00〜翌6:00のみ使用可
 const NIGHTBUS = [
   ['浜松駅',  34.7108,137.7261,'東京駅',  35.6812,139.7671, 210,'遠鉄バス他'],
   ['浜松駅',  34.7108,137.7261,'大阪駅',  34.7026,135.4959, 360,'Willer他'],
@@ -239,241 +184,187 @@ const NIGHTBUS = [
   ['青森駅',  40.8246,140.7400,'東京駅',  35.6812,139.7671, 480,'JRバス他'],
 ];
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    MODES  新幹線・飛行機・徒歩は対象外
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 const MODES = {
-  local_bus:    {spd:22, maxKm:60,  label:'路線バス',    icon:'🚌', fare:d=>Math.round((200+d*14)/10)*10},
-  local_train:  {spd:42, maxKm:200, label:'在来線(鈍行)',icon:'🚃', fare:d=>Math.round((150+d*16.2)/10)*10},
-  express_train:{spd:90, maxKm:500, label:'特急',        icon:'🚃', fare:d=>Math.round((150+d*16.2+1800)/100)*100},
-  highway_bus:  {spd:65, maxKm:750, label:'高速バス',    icon:'🚌', fare:d=>Math.round((600+d*4)/100)*100},
-  rental_car:   {spd:65, maxKm:600, label:'レンタカー',  icon:'🚗', fare:d=>Math.round((5000+d*20)/500)*500},
-  night_bus:    {spd:55, maxKm:900, label:'夜行バス',    icon:'🌙', fare:d=>Math.round((3000+d*3)/500)*500},
-  ferry:        {spd:25, maxKm:9999,label:'フェリー',    icon:'⛴',  fare:d=>Math.round((3000+d*8)/500)*500},
+  local_bus:    {spd:22, label:'路線バス',    icon:'🚌', fare:d=>Math.round((200+d*14)/10)*10},
+  local_train:  {spd:42, label:'在来線(鈍行)',icon:'🚃', fare:d=>Math.round((150+d*16.2)/10)*10},
+  express_train:{spd:90, label:'特急',        icon:'🚃', fare:d=>Math.round((150+d*16.2+1800)/100)*100},
+  highway_bus:  {spd:65, label:'高速バス',    icon:'🚌', fare:d=>Math.round((600+d*4)/100)*100},
+  rental_car:   {spd:65, label:'レンタカー',  icon:'🚗', fare:d=>Math.round((5000+d*20)/500)*500},
+  night_bus:    {spd:55, label:'夜行バス',    icon:'🌙', fare:d=>Math.round((3000+d*3)/500)*500},
+  ferry:        {spd:25, label:'フェリー',    icon:'⛴',  fare:d=>Math.round((3000+d*8)/500)*500},
 };
 const BOARD = {local_bus:5,local_train:8,express_train:15,highway_bus:15,rental_car:20,night_bus:30,ferry:60};
 function calcMins(d,m){return Math.max(3,Math.round(d/MODES[m].spd*60+(BOARD[m]||0)));}
 function fmtMins(m){return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'');}
 function fmtFare(y){return y===0?'無料':'約'+y.toLocaleString()+'円';}
+function isNight(){const h=new Date().getHours();return h>=20||h<6;}
 
-/* 時間帯判定: 夜行バスは20:00〜翌6:00のみ */
-function isNightTime(){const h=new Date().getHours();return h>=20||h<6;}
-
-/* ══════════════════════════════════════════════════════
-   DEBUG LOGGER
-   ══════════════════════════════════════════════════════ */
-const _logs = [];
+/* ═══════════════════════════════════════════════════════
+   DEBUG
+   ═══════════════════════════════════════════════════════ */
+const _logs=[];
 function dbg(msg){
-  const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const line = `[${t}] ${msg}`;
-  _logs.push(line);
-  console.log(line);
-  const el = document.getElementById('debug-log');
-  if(el){ el.textContent = _logs.slice(-60).join('\n'); el.scrollTop = el.scrollHeight; }
+  const t=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line=`[${t}] ${msg}`;
+  _logs.push(line);console.log(line);
+  const el=document.getElementById('debug-log');
+  if(el){el.textContent=_logs.slice(-80).join('\n');el.scrollTop=el.scrollHeight;}
 }
-function dbgClear(){ _logs.length=0; const el=document.getElementById('debug-log'); if(el) el.textContent=''; }
+function dbgClear(){_logs.length=0;const el=document.getElementById('debug-log');if(el)el.textContent='';}
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    GEO
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 function distKm(a,b){
-  const R=6371,φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180,
-    dφ=(b.lat-a.lat)*Math.PI/180,dλ=(b.lng-a.lng)*Math.PI/180;
+  const R=6371,dφ=(b.lat-a.lat)*Math.PI/180,dλ=(b.lng-a.lng)*Math.PI/180,
+    φ1=a.lat*Math.PI/180,φ2=b.lat*Math.PI/180;
   const x=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-// progress: 目的地への近づき度
-// +1.0 = 完全に目的地方向へ最大距離移動
-//  0.0 = 横移動（目的地距離変わらず）
-// -1.0 = 完全に真逆方向へ最大距離移動
-function progress(from, to, dest){
-  const total = distKm(from, dest);
-  if(total < 0.1) return 0;
-  return (distKm(from, dest) - distKm(to, dest)) / total;
+// progress: +1=目的地方向 0=横移動 -1=真逆
+function prog(from,to,dest){
+  const tot=distKm(from,dest);
+  return tot<0.1?0:(distKm(from,dest)-distKm(to,dest))/tot;
 }
 
-/* ══════════════════════════════════════════════════════
-   HEARTRAILS
-   ──────────────────────────────────────────────────────
-   Heartrailsは「指定座標から近い順に最大N件」を返す仕様のため、
-   1回のクエリだと近距離駅しか得られない。
-   出発地・中間点・目的地付近の3箇所を並行取得して
-   全距離帯の駅をカバーする。
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   HEARTRAILS  路線ベースAPI
+   ─────────────────────────────────────────────────────
+   水曜どうでしょう方式:
+   「今いる駅が属する路線の全駅リストを取得する」
+   → 東海道本線なら東京〜大阪の全駅が候補に入る
+   → その中からダイス出目の条件に合う1駅を選ぶ
+
+   エンドポイント:
+   ① getStations?name=xxx   駅名 → その駅が属する路線リスト
+   ② getStations?line=xxx   路線名 → 路線上の全駅リスト
+   ③ getStations?x=&y=&...  座標検索（フォールバック用）
+   ═══════════════════════════════════════════════════════ */
 const _cache = new Map();
 
-async function fetchNearby(lat, lng, km=150){
-  const k=`${lat.toFixed(2)},${lng.toFixed(2)}_${km}`;
-  if(_cache.has(k)) return _cache.get(k);
-  try{
-    const url=`https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=${km}`;
-    const r=await Promise.race([fetch(url),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))]);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    const list=(d?.response?.station||[]).map(s=>({
-      name:s.name+'駅',lat:parseFloat(s.y),lng:parseFloat(s.x),
-      line:s.line,
+async function hrFetch(params) {
+  if (_cache.has(params)) return _cache.get(params);
+  const url = `https://express.heartrails.com/api/json?${params}`;
+  try {
+    const r = await Promise.race([
+      fetch(url),
+      new Promise((_,j) => setTimeout(() => j(new Error('timeout')), 12000))
+    ]);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    const list = (d?.response?.station || []).map(s => ({
+      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x), line: s.line,
     }));
-    _cache.set(k,list);
-    dbg(`fetchNearby(${lat.toFixed(2)},${lng.toFixed(2)},${km}km) → ${list.length}駅`);
+    _cache.set(params, list);
     return list;
-  }catch(e){dbg(`fetchNearby ERROR: ${e.message}`);return [];}
+  } catch(e) { dbg('hrFetch ERR('+params.slice(0,40)+'): '+e.message); return []; }
 }
 
-// 8方向のアンカーポイントから並行取得して重複除去
-//
-// Heartrailsは1クエリあたり最大数件しか返さないため、
-// 多方向・多点クエリで全方位をカバーする。
-//
-// 8アンカー:
-//   前進方向 ×3 (25%/50%/75%地点)  → prog > 0
-//   後退方向 ×2 (25%/50%後方)      → prog < 0
-//   横方向   ×2 (左右)              → prog ≈ 0
-//   出発地   ×1                     → ローカル
-async function fetchAll(from, dest){
-  const totalDist = distKm(from, dest);
-
-  // 度単位の方向ベクトル（正規化）
-  const dLat = dest.lat - from.lat;
-  const dLng = dest.lng - from.lng;
-  const norm  = Math.sqrt(dLat*dLat + dLng*dLng);
-  const uLat  = dLat/norm, uLng = dLng/norm;
-  // 垂直ベクトル（横方向）
-  const pLat  = -uLng, pLng = uLat;
-
-  // 1ステップ ≈ 総距離の25%（度換算）
-  const step = Math.min(totalDist / 111 * 0.25, 3.5);
-
-  const anchors = [
-    [from.lat,                    from.lng,                    100, '出発地'],
-    [from.lat + uLat*step,        from.lng + uLng*step,        120, '前進25%'],
-    [from.lat + uLat*step*2,      from.lng + uLng*step*2,      120, '前進50%'],
-    [from.lat + uLat*step*3,      from.lng + uLng*step*3,      120, '前進75%'],
-    [from.lat - uLat*step,        from.lng - uLng*step,        120, '後退25%'],
-    [from.lat - uLat*step*2,      from.lng - uLng*step*2,      120, '後退50%'],
-    [from.lat + pLat*step,        from.lng + pLng*step,        100, '右横'],
-    [from.lat - pLat*step,        from.lng - pLng*step,        100, '左横'],
-  ];
-
-  dbg(`fetchAll: ${anchors.length}方向クエリ (step≈${Math.round(step*111)}km, total=${Math.round(totalDist)}km)`);
-  anchors.forEach((a,i)=>dbg(`  [${i+1}] ${a[3]} (${a[0].toFixed(2)},${a[1].toFixed(2)}) r=${a[2]}km`));
-
-  const results = await Promise.all(
-    anchors.map(([lat,lng,r]) => fetchNearby(lat,lng,r).catch(e=>{dbg('fetch ERR:'+e.message);return [];}))
-  );
-
-  const seen = new Set();
-  const all  = [];
-  for(const list of results){
-    for(const st of list){
-      if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
-    }
-  }
-  dbg(`fetchAll完了: [${results.map(r=>r.length).join(',')}] → 合計${all.length}駅`);
-  return all;
+// 駅名からその駅が属する路線一覧を返す（各路線ごとに1エントリ）
+function fetchByName(name) {
+  return hrFetch(`method=getStations&name=${encodeURIComponent(name)}`);
+}
+// 路線名から全駅リストを返す
+function fetchByLine(line) {
+  return hrFetch(`method=getStations&line=${encodeURIComponent(line)}`);
+}
+// 座標から近隣駅（フォールバック・GPS用）
+function fetchNearby(lat, lng, km=150) {
+  return hrFetch(`method=getStations&x=${lng}&y=${lat}&distance=${km}`);
 }
 
-// 距離に応じた最適手段（1〜2種類に絞る ← 同一目的地の消耗を防ぐ）
-function getModesForDist(d){
-  if(d <=  40) return ['local_bus'];
-  if(d <= 100) return ['local_train'];
-  if(d <= 250) return ['local_train', 'express_train'];
-  if(d <= 500) return ['express_train', 'highway_bus'];
-  if(d <= 750) return ['express_train', 'rental_car'];
-  return ['express_train'];
-}
-
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    GEOCODE
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 const GEO_FB={
   '北海道':{lat:43.0687,lng:141.3508},'札幌':{lat:43.0687,lng:141.3508},
   '函館':{lat:41.7737,lng:140.7268},'旭川':{lat:43.7700,lng:142.3650},
-  '釧路':{lat:42.9849,lng:144.3820},'青森':{lat:40.8246,lng:140.7400},
-  '仙台':{lat:38.2682,lng:140.8694},'秋田':{lat:39.7196,lng:140.1023},
-  '盛岡':{lat:39.7036,lng:141.1527},'新潟':{lat:37.9127,lng:139.0595},
-  '長野':{lat:36.6448,lng:138.1880},'金沢':{lat:36.5784,lng:136.6481},
-  '富山':{lat:36.7003,lng:137.2133},'東京':{lat:35.6812,lng:139.7671},
+  '青森':{lat:40.8246,lng:140.7400},'仙台':{lat:38.2682,lng:140.8694},
+  '秋田':{lat:39.7196,lng:140.1023},'盛岡':{lat:39.7036,lng:141.1527},
+  '新潟':{lat:37.9127,lng:139.0595},'長野':{lat:36.6448,lng:138.1880},
+  '金沢':{lat:36.5784,lng:136.6481},'東京':{lat:35.6812,lng:139.7671},
   '横浜':{lat:35.4657,lng:139.6221},'名古屋':{lat:35.1709,lng:136.8815},
   '浜松':{lat:34.7108,lng:137.7261},'静岡':{lat:34.9769,lng:138.3831},
   '大阪':{lat:34.7026,lng:135.4959},'京都':{lat:34.9850,lng:135.7582},
   '神戸':{lat:34.6790,lng:135.1950},'広島':{lat:34.3853,lng:132.4553},
-  '岡山':{lat:34.6552,lng:133.9195},'福岡':{lat:33.5904,lng:130.4017},
-  '博多':{lat:33.5898,lng:130.4201},'熊本':{lat:32.7903,lng:130.7460},
-  '鹿児島':{lat:31.5794,lng:130.5571},'那覇':{lat:26.2124,lng:127.6809},
+  '福岡':{lat:33.5904,lng:130.4017},'博多':{lat:33.5898,lng:130.4201},
+  '熊本':{lat:32.7903,lng:130.7460},'鹿児島':{lat:31.5794,lng:130.5571},
+  '那覇':{lat:26.2124,lng:127.6809},
 };
-async function geocode(text){
-  const q=text.replace(/駅$/,'').trim();
-  try{
-    const url=`https://express.heartrails.com/api/json?method=getStations&name=${encodeURIComponent(q)}`;
-    const r=await Promise.race([fetch(url),new Promise((_,j)=>setTimeout(()=>j(),8000))]);
-    if(r.ok){
-      const d=await r.json();
-      const st=d?.response?.station;
-      if(st?.length) return {name:st[0].name+'駅',lat:parseFloat(st[0].y),lng:parseFloat(st[0].x)};
-    }
-  }catch(e){console.warn('[geocode]',e.message);}
-  for(const [k,v] of Object.entries(GEO_FB)){
-    if(text.includes(k)||k.includes(q)) return {name:text,lat:v.lat,lng:v.lng};
+async function geocode(text) {
+  const q = text.replace(/駅$/,'').trim();
+  try {
+    const hits = await fetchByName(q);
+    if (hits.length) return {name:hits[0].name, lat:hits[0].lat, lng:hits[0].lng};
+  } catch(e) { console.warn('[geocode]',e.message); }
+  for (const [k,v] of Object.entries(GEO_FB)) {
+    if (text.includes(k)||k.includes(q)) return {name:text, lat:v.lat, lng:v.lng};
   }
   return null;
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    GPS
-   ══════════════════════════════════════════════════════ */
-async function doGPS(){
-  if(!navigator.geolocation){toast('GPSが使えません');return;}
+   ═══════════════════════════════════════════════════════ */
+async function doGPS() {
+  if (!navigator.geolocation) { toast('GPSが使えません'); return; }
   toast('📍 GPS取得中…');
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    const{latitude:la,longitude:ln}=pos.coords;
-    try{
-      const url=`https://express.heartrails.com/api/json?method=getStations&x=${ln}&y=${la}&distance=5`;
-      const r=await Promise.race([fetch(url),new Promise((_,j)=>setTimeout(()=>j(),6000))]);
-      const d=await r.json();
-      const st=d?.response?.station;
-      const nm=st?.length?st[0].name+'駅':`${la.toFixed(4)},${ln.toFixed(4)}`;
-      document.getElementById('orig').value=nm; toast('📍 '+nm);
-    }catch{document.getElementById('orig').value=`${la.toFixed(4)},${ln.toFixed(4)}`; toast('📍 座標を取得');}
-  },()=>toast('GPS取得に失敗しました'));
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const {latitude:la, longitude:ln} = pos.coords;
+    const hits = await fetchNearby(la, ln, 5);
+    const nm = hits.length ? hits[0].name : `${la.toFixed(4)},${ln.toFixed(4)}`;
+    document.getElementById('orig').value = nm;
+    toast('📍 '+nm);
+  }, () => toast('GPS取得に失敗しました'));
 }
 
-/* ══════════════════════════════════════════════════════
-   MASTER POOL BUILDER  路線ベース版
-   ──────────────────────────────────────────────────────
-   ① 現在地の駅名で路線一覧を取得
-   ② 各路線の全駅をリストアップ
-   ③ 全駅 × 距離に応じた手段 でプール化
-   → 東海道本線なら東京〜大阪の全駅が候補に入る
-   ══════════════════════════════════════════════════════ */
-async function buildPool(from, dest){
-  const night = isNightTime();
-  const pool = [];
+/* ═══════════════════════════════════════════════════════
+   POOL BUILDER  路線ベース
+   ─────────────────────────────────────────────────────
+   ① 現在地の駅名で getStations?name= → 路線リストを取得
+   ② 各路線の getStations?line= → 路線上の全駅を取得
+   ③ 全駅 × 距離適合手段 でエントリを生成
+   ④ フェリー・夜行バス（静的データ）を追加
+   ═══════════════════════════════════════════════════════ */
+function modesForDist(d) {
+  if (d <=  40) return ['local_bus'];
+  if (d <= 120) return ['local_train'];
+  if (d <= 300) return ['local_train','express_train'];
+  if (d <= 700) return ['express_train','highway_bus'];
+  return ['express_train'];
+}
 
-  // ── Step1: 現在地の路線を取得 ─────────────────────────────────
+async function buildPool(from, dest) {
+  const night = isNight();
+  const pool  = [];
+
+  // ① 現在地の路線を取得
   const base = from.name.replace(/駅$/,'');
   const nameHits = await fetchByName(base);
   const lines = [...new Set(nameHits.map(s=>s.line).filter(Boolean))];
-  dbg(`${from.name} → ${lines.length}路線: ${lines.slice(0,8).join(' / ')}${lines.length>8?'...':''}`);
+  dbg(`${from.name} の路線 (${lines.length}件): ${lines.join(' / ')}`);
 
   let allStations = [];
 
   if (lines.length > 0) {
-    // ── Step2: 各路線の全駅を並行取得 ────────────────────────────
-    const lineResults = await Promise.all(lines.map(l=>fetchByLine(l)));
+    // ② 各路線の全駅を並行取得
+    const results = await Promise.all(lines.map(l => fetchByLine(l)));
     const seen = new Set([from.name]);
     for (let i=0; i<lines.length; i++) {
-      dbg(`  ${lines[i]}: ${lineResults[i].length}駅`);
-      for (const st of lineResults[i]) {
+      dbg(`  ${lines[i]}: ${results[i].length}駅`);
+      for (const st of results[i]) {
         if (!seen.has(st.name)) { seen.add(st.name); allStations.push(st); }
       }
     }
-    dbg(`路線上の合計: ${allStations.length}駅`);
+    dbg(`路線上の全駅: ${allStations.length}駅`);
   }
 
-  // 路線が取れなかった or 少なすぎる場合は座標フォールバック
+  // 路線が取れない場合は座標フォールバック
   if (allStations.length < 10) {
-    dbg(`⚠️ 路線取得不足 → 座標フォールバック`);
+    dbg(`⚠️ 路線データ不足 → 座標フォールバック (r=300km)`);
     const nearby = await fetchNearby(from.lat, from.lng, 300);
     const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
     for (const st of nearby) {
@@ -482,164 +373,139 @@ async function buildPool(from, dest){
     dbg(`フォールバック後: ${allStations.length}駅`);
   }
 
-  // ── Step3: プール化 ───────────────────────────────────────────
+  // ③ プール化
   for (const st of allStations) {
     const d = distKm(from, st);
     if (d < 0.3) continue;
-    const prog = progress(from, st, dest);
-    for (const mode of getModesForDist(d)) {
-      pool.push({
-        to:{name:st.name,lat:st.lat,lng:st.lng},
-        mode, dist:d, prog,
-        mins:calcMins(d,mode),
-        fare:MODES[mode].fare(d),
-        note:null,
-      });
+    const p = prog(from, st, dest);
+    for (const mode of modesForDist(d)) {
+      pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
+        mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:null});
     }
   }
 
-  // ── Step4: フェリー（常時）────────────────────────────────────
-  for(const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY){
-    if(distKm(from,{lat:fla,lng:fln}) > 60) continue;
+  // ④ フェリー（常時）
+  for (const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY) {
+    if (distKm(from,{lat:fla,lng:fln}) > 60) continue;
     const to={name:tn,lat:tla,lng:tln};
     const d=distKm(from,to);
-    pool.push({to,mode:'ferry',dist:d,prog:progress(from,to,dest),
+    pool.push({to,mode:'ferry',dist:d,prog:prog(from,to,dest),
       mins,fare:MODES.ferry.fare(d),note:`${co}（${fn}発）`});
   }
 
-  // ── Step5: 夜行バス（夜間のみ）───────────────────────────────
-  if(night){
-    for(const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHTBUS){
-      if(distKm(from,{lat:fla,lng:fln}) > 50) continue;
+  // ⑤ 夜行バス（夜間のみ）
+  if (night) {
+    for (const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHTBUS) {
+      if (distKm(from,{lat:fla,lng:fln}) > 50) continue;
       const to={name:tn,lat:tla,lng:tln};
       const d=distKm(from,to);
-      pool.push({to,mode:'night_bus',dist:d,prog:progress(from,to,dest),
+      pool.push({to,mode:'night_bus',dist:d,prog:prog(from,to,dest),
         mins,fare:MODES.night_bus.fare(d),note:`${co}（${fn}発・夜間）`});
     }
   }
 
-  // progの分布をログ出力
-  const progBuckets = {very_neg:0, neg:0, near_zero:0, small_pos:0, mid_pos:0, high_pos:0};
+  // ログ
+  const pb={vn:0,n:0,z:0,sp:0,mp:0,hp:0};
   for(const e of pool){
-    if(e.prog < -0.1) progBuckets.very_neg++;
-    else if(e.prog < 0) progBuckets.neg++;
-    else if(e.prog < 0.1) progBuckets.near_zero++;
-    else if(e.prog < 0.3) progBuckets.small_pos++;
-    else if(e.prog < 0.6) progBuckets.mid_pos++;
-    else progBuckets.high_pos++;
+    if(e.prog<-0.1)pb.vn++;else if(e.prog<0)pb.n++;else if(e.prog<0.1)pb.z++;
+    else if(e.prog<0.3)pb.sp++;else if(e.prog<0.6)pb.mp++;else pb.hp++;
   }
-  const modeCount = {};
-  for(const e of pool) modeCount[e.mode]=(modeCount[e.mode]||0)+1;
-  dbg(`pool: ${stations.length}駅 → ${pool.length}エントリ (夜間=${night})`);
-  dbg(`prog分布: <-10%:${progBuckets.very_neg} -10~0%:${progBuckets.neg} 0~10%:${progBuckets.near_zero} 10~30%:${progBuckets.small_pos} 30~60%:${progBuckets.mid_pos} 60%+:${progBuckets.high_pos}`);
-  dbg(`手段: ${Object.entries(modeCount).map(([k,v])=>k+'='+v).join(' ')}`);
+  const mc={};
+  for(const e of pool) mc[e.mode]=(mc[e.mode]||0)+1;
+  dbg(`pool: ${pool.length}エントリ`);
+  dbg(`prog分布: <-10%:${pb.vn} -10~0%:${pb.n} ~10%:${pb.z} ~30%:${pb.sp} ~60%:${pb.mp} 60%+:${pb.hp}`);
+  dbg(`手段: ${Object.entries(mc).map(([k,v])=>k+'='+v).join(' ')}`);
   return pool;
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    DICE ASSIGNMENT
+   ─────────────────────────────────────────────────────
+   prog（目的地への近づき度）ベースで6択を決める。
+   全6件の行き先が被らないよう管理する。
 
-   progres（目的地への近づき度）ベースで6択を決める:
+   🎲1 真逆       prog最小（最も遠ざかる）確定
+   🎲2 逆方向A   prog < +0.15  ランダム
+   🎲3 逆方向B   prog < +0.15  ランダム（2と被らない）
+   🎲4 少し前進   prog 0.05〜0.45  ランダム
+   🎲5 前進       prog 0.2〜0.8    ランダム
+   🎲6 最適前進   prog最大 + 速い手段
 
-   🎲1 真逆       prog < -0.05  → prog最小（最も遠ざかる）を確定
-   🎲2 横〜逆A   prog < 0.15   → ランダム
-   🎲3 横〜逆B   prog < 0.15   → ランダム（2と行き先が被らない）
-   🎲4 少し前進   0.05〜0.45   → prog小さめのものをランダム
-   🎲5 前進       0.2〜0.8     → prog大きめのものをランダム
-   🎲6 最適前進   prog > 0.3   → prog最大 + 速い手段優先
-
-   各帯に候補が足りない場合は帯を段階的に広げてフォールバック。
-   全6件の行き先（to.name）は重複しない。
-   ══════════════════════════════════════════════════════ */
-
-// 速い手段ランク（🎲6で使用）
-const SPD = {express_train:6,highway_bus:5,rental_car:5,night_bus:4,ferry:3,local_train:2,local_bus:1};
-
-function shuffle(arr){
-  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
-  return arr;
-}
-
-// 出目ごとの選出ルール
-// each rule: {bands:[[minProg,maxProg],...], sort:'min'|'max_prog'|'random'|'fast'}
-const DICE_RULES = {
-  1:{bands:[[-1.0,-0.05],[-1.0, 0.0], [-1.0, 0.1], [-1.0, 1.0]], sort:'min'},
-  2:{bands:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]], sort:'random'},
-  3:{bands:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]], sort:'random'},
-  4:{bands:[[ 0.05, 0.45],[0.0, 0.55], [-0.1, 0.65],[-1.0, 1.0]], sort:'random'},
-  5:{bands:[[ 0.2,  0.8], [0.1, 0.9], [ 0.0, 1.0], [-1.0, 1.0]], sort:'random'},
-  6:{bands:[[ 0.3,  1.0], [0.15,1.0], [ 0.0, 1.0], [-1.0, 1.0]], sort:'fast'},
+   各帯に候補不足の場合は段階的に帯を広げる
+   ═══════════════════════════════════════════════════════ */
+const BANDS = {
+  1:[[-1.0,-0.05],[-1.0, 0.0], [-1.0, 0.1], [-1.0, 1.0]],
+  2:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]],
+  3:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]],
+  4:[[ 0.05, 0.45],[ 0.0, 0.55],[-0.1, 0.65],[-1.0, 1.0]],
+  5:[[ 0.2,  0.8], [ 0.1, 0.9], [ 0.0, 1.0], [-1.0, 1.0]],
+  6:[[ 0.3,  1.0], [ 0.15,1.0], [ 0.0, 1.0], [-1.0, 1.0]],
 };
+const SPD_RANK = {express_train:6,highway_bus:5,rental_car:5,night_bus:4,ferry:3,local_train:2,local_bus:1};
 
-function assignDice(pool){
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function assignDice(pool) {
   const used = new Set();
   const result = [];
 
-  for(let die=1; die<=6; die++){
-    const rule = DICE_RULES[die];
+  for (let die=1; die<=6; die++) {
     let picked = null;
-    let usedBandIdx = -1;
+    let usedBand = -1;
 
-    for(let bi=0; bi<rule.bands.length; bi++){
-      const [minP, maxP] = rule.bands[bi];
-      let cands = pool.filter(c => c.prog >= minP && c.prog <= maxP && !used.has(c.to.name));
-      dbg(`🎲${die} band[${bi}](${minP}~${maxP}): ${cands.length}件`);
-      if(!cands.length) continue;
-      usedBandIdx = bi;
+    for (let bi=0; bi<BANDS[die].length; bi++) {
+      const [lo,hi] = BANDS[die][bi];
+      let cands = pool.filter(c => c.prog>=lo && c.prog<=hi && !used.has(c.to.name));
+      dbg(`🎲${die} band[${bi}](${lo}~${hi}): ${cands.length}件`);
+      if (!cands.length) continue;
+      usedBand = bi;
 
-      if(rule.sort === 'min'){
-        cands.sort((a,b) => a.prog - b.prog); // prog最小（最も遠ざかる）
+      if (die === 1) {
+        cands.sort((a,b) => a.prog - b.prog); // prog最小
         picked = cands[0];
-      } else if(rule.sort === 'fast'){
-        cands.sort((a,b) => {
-          if(b.prog !== a.prog) return b.prog - a.prog; // prog高い順
-          return (SPD[b.mode]||0) - (SPD[a.mode]||0);  // 同prog内は速い手段優先
-        });
+      } else if (die === 6) {
+        cands.sort((a,b) => b.prog!==a.prog ? b.prog-a.prog : (SPD_RANK[b.mode]||0)-(SPD_RANK[a.mode]||0));
         picked = cands[0];
       } else {
-        // random: シャッフルして先頭
         shuffle(cands);
         picked = cands[0];
       }
       break;
     }
 
-    if(picked){
+    if (picked) {
       used.add(picked.to.name);
       result.push({...picked, dieValue:die});
-      dbg(`🎲${die} → ${picked.to.name} (prog=${(picked.prog*100).toFixed(1)}%, ${picked.mode}, band=${usedBandIdx})`);
+      dbg(`🎲${die} → ${picked.to.name} (prog=${(picked.prog*100).toFixed(1)}%, ${picked.mode}, band=${usedBand})`);
     } else {
-      dbg(`🎲${die} → ❌ 候補なし (used=${[...used].join(',')})`);
+      dbg(`🎲${die} → ❌ 候補なし`);
     }
   }
 
-  dbg(`assignDice: ${result.length}/6件選出 → [${result.map(r=>`🎲${r.dieValue}:${r.to.name}(${(r.prog*100).toFixed(1)}%)`).join(', ')}]`);
-  if(result.length < 6) dbg(`⚠️ ${6-result.length}件不足 (pool=${pool.length}件)`);
+  dbg(`assignDice: ${result.length}/6件`);
   return result;
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    STATE
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 let S = null;
-const SK = 'saikoro_v7';
+const SK = 'saikoro_v8';
 function save(){try{S?localStorage.setItem(SK,JSON.stringify(S)):localStorage.removeItem(SK);}catch{}}
 function load(){try{const r=localStorage.getItem(SK);if(r)S=JSON.parse(r);}catch{S=null;}}
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    GAME LOGIC
-   ══════════════════════════════════════════════════════ */
-let _gcTimer={};
-function onInput(field){
-  const el=document.getElementById(field+'-ok');
-  el.textContent='';
-  const v=document.getElementById(field).value.trim();
-  if(!v) return;
-  clearTimeout(_gcTimer[field]);
-  _gcTimer[field]=setTimeout(async()=>{
+   ═══════════════════════════════════════════════════════ */
+let _gcT={};
+function onInput(f){
+  const el=document.getElementById(f+'-ok');el.textContent='';
+  const v=document.getElementById(f).value.trim();if(!v)return;
+  clearTimeout(_gcT[f]);
+  _gcT[f]=setTimeout(async()=>{
     el.textContent='検索中…';el.style.color='var(--dim)';
     const r=await geocode(v);
-    if(r){el.textContent='✅ '+r.name+' ('+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+')';el.style.color='var(--gr)';}
+    if(r){el.textContent='✅ '+r.name;el.style.color='var(--gr)';}
     else{el.textContent='⚠️ 見つかりません';el.style.color='var(--re)';}
   },600);
 }
@@ -660,11 +526,11 @@ async function startGame(){
 }
 
 async function loadCandidates(){
-  if(!S) return;
+  if(!S)return;
   dbgClear();
-  dbg(`=== loadCandidates 開始 ===`);
-  dbg(`現在地: ${S.currentLocation.name} (${S.currentLocation.lat?.toFixed(4)}, ${S.currentLocation.lng?.toFixed(4)})`);
-  dbg(`目的地: ${S.destination.name} (${S.destination.lat?.toFixed(4)}, ${S.destination.lng?.toFixed(4)})`);
+  dbg(`=== loadCandidates ===`);
+  dbg(`現在地: ${S.currentLocation.name} (${S.currentLocation.lat?.toFixed(4)},${S.currentLocation.lng?.toFixed(4)})`);
+  dbg(`目的地: ${S.destination.name}`);
   dbg(`総距離: ${distKm(S.currentLocation,S.destination).toFixed(1)}km`);
   S.status='loading';render();
   try{
@@ -672,17 +538,16 @@ async function loadCandidates(){
     S.candidates=assignDice(pool);
     S.status='waiting_dice';
   }catch(e){
-    console.error('[loadCandidates]',e);
-    toast('エラー: '+e.message);
+    dbg('ERROR: '+e.message);toast('エラー: '+e.message);
     S.status='waiting_dice';S.candidates=[];
   }
   save();render();
 }
 
 function selectRoute(die){
-  if(!S||S.status!=='waiting_dice') return;
+  if(!S||S.status!=='waiting_dice')return;
   const c=S.candidates.find(x=>x.dieValue===die);
-  if(!c) return;
+  if(!c)return;
   S.legs.push({legNumber:S.legs.length+1,diceRoll:die,selected:c,
     status:'traveling',startedAt:new Date().toISOString(),completedAt:null});
   S.status='traveling';
@@ -690,19 +555,20 @@ function selectRoute(die){
 }
 
 function arrive(){
-  if(!S||S.status!=='traveling') return;
+  if(!S||S.status!=='traveling')return;
   const leg=S.legs.at(-1);
   leg.status='completed';leg.completedAt=new Date().toISOString();
   S.currentLocation={...leg.selected.to};
   const d=distKm(S.currentLocation,S.destination);
-  const nameMatch=S.currentLocation.name===S.destination.name;
-  if(nameMatch||d<1.0){S.status='completed';save();render();return;}
+  if(S.currentLocation.name===S.destination.name||d<1.0){
+    S.status='completed';save();render();return;
+  }
   toast('📍 到着！目的地まであと約'+Math.round(d)+'km');
   loadCandidates();
 }
 
 function endGame(){
-  if(!confirm('ゲームを終了しますか？')) return;
+  if(!confirm('ゲームを終了しますか？'))return;
   S=null;save();
   document.getElementById('orig').value='';
   document.getElementById('dest').value='';
@@ -715,9 +581,9 @@ function resetGame(){
   showSt('setup');
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    RENDER
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 function showSt(id){
   ['setup','dice','travel','done'].forEach(s=>{
     const e=document.getElementById('st-'+s);if(e)e.style.display='none';
@@ -730,7 +596,7 @@ function render(){
   if(S.status==='loading'){
     showSt('dice');renderPc();
     document.getElementById('clist').innerHTML=
-      `<div class="loading"><div class="sp"></div><span>Heartrailsから駅データ取得中…</span></div>`;
+      `<div class="loading"><div class="sp"></div><span>路線データ取得中…</span></div>`;
     return;
   }
   if(S.status==='waiting_dice'){showSt('dice');renderPc();renderList();return;}
@@ -744,7 +610,7 @@ function render(){
     document.getElementById('donetxt').innerHTML=
       `<b>${S.origin.name}</b> → <b>${S.destination.name}</b><br>`+
       `${done.length}レグ・推定${fmtMins(mins)}・合計${fmtFare(fare)}<br>`+
-      `<span style="font-size:12px">目的地まで残り${fd}km地点でゴール</span>`;
+      `<span style="font-size:12px">残り${fd}km地点でゴール</span>`;
   }
 }
 
@@ -755,35 +621,26 @@ function renderPc(){
     `<div style="font-size:15px;font-weight:700">${S.origin.name} → ${S.destination.name}</div>
      <div style="font-size:13px;color:var(--am);margin-top:3px">📍 現在地: ${S.currentLocation.name}</div>
      <div style="font-size:11px;color:var(--dim);margin-top:2px">残り約 ${d}km ／ ${done}レグ完了</div>`;
-  const h=new Date().getHours();
-  const night=h>=20||h<6;
   document.getElementById('time-info').textContent=
-    night ? '🌙 夜間モード（夜行バス利用可）' : '☀️ 昼間モード（夜行バスは20時から）';
+    isNight()?'🌙 夜間モード（夜行バス利用可）':'☀️ 昼間モード（夜行バスは20時から）';
 }
-
-const DIE_LABEL={
-  1:'💀 真逆',2:'↩️ 逆方向A',3:'↩️ 逆方向B',
-  4:'↗️ 少し前進',5:'➡️ 前進',6:'🚀 最適前進'
-};
 
 function renderList(){
   const cands=S.candidates||[];
   if(!cands.length){
     document.getElementById('clist').innerHTML=
-      `<div class="loading"><span style="color:var(--re)">候補が見つかりませんでした<br>Heartrails APIが利用できない可能性があります</span></div>`;
+      `<div class="loading"><span style="color:var(--re)">候補が見つかりませんでした。デバッグログを確認してください。</span></div>`;
     return;
   }
   document.getElementById('clist').innerHTML=cands.map(c=>{
     const m=MODES[c.mode];
     const pct=Math.round(c.prog*100);
-    const pctStr=pct>0?`+${pct}%`:`${pct}%`;
     return `<div class="crow">
       <div class="cbadge d${c.dieValue}">${c.dieValue}</div>
       <div class="cbody">
         <div class="cdest">${m.icon} ${c.to.name}</div>
-        <div class="cmeta">
-          ${m.label} ／ <b>${Math.round(c.dist*10)/10}km</b> ／ <b>${fmtMins(c.mins)}</b> ／ <b>${fmtFare(c.fare)}</b>
-          <span style="color:${pct>=0?'var(--gr)':'var(--re)'}"> ／ 進捗${pctStr}</span>
+        <div class="cmeta">${m.label} ／ <b>${Math.round(c.dist*10)/10}km</b> ／ <b>${fmtMins(c.mins)}</b> ／ <b>${fmtFare(c.fare)}</b>
+          <span style="color:${pct>=0?'var(--gr)':'var(--re)'};font-size:11px"> ／ 進捗${pct>=0?'+':''}${pct}%</span>
         </div>
         ${c.note?`<div class="cnote">${c.note}</div>`:''}
       </div>
@@ -793,9 +650,7 @@ function renderList(){
 }
 
 function renderTravel(){
-  const leg=S.legs.at(-1);
-  const c=leg.selected;
-  const m=MODES[c.mode];
+  const leg=S.legs.at(-1);const c=leg.selected;const m=MODES[c.mode];
   const murl=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(S.currentLocation.name)}&destination=${encodeURIComponent(c.to.name)}&travelmode=transit`;
   document.getElementById('confwrap').innerHTML=
     `<div class="conf">
@@ -811,20 +666,18 @@ function renderTravel(){
   const done=S.legs.filter(l=>l.status==='completed');
   document.getElementById('thist').innerHTML=done.length
     ?[...done].reverse().map(l=>{
-      const r=l.selected;const m2=MODES[r.mode];
-      return `<div class="li">
-        <div class="lih"><span style="font-size:11px;color:var(--dim)">レグ ${l.legNumber}</span><span style="font-size:13px">🎲${l.diceRoll}</span></div>
-        <div style="font-size:13px">${m2.icon} → ${r.to.name}（${m2.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）</div>
-      </div>`;}).join('')
+        const r=l.selected;const m2=MODES[r.mode];
+        return `<div class="li">
+          <div class="lih"><span style="font-size:11px;color:var(--dim)">レグ ${l.legNumber}</span><span style="font-size:13px">🎲${l.diceRoll}</span></div>
+          <div style="font-size:13px">${m2.icon} → ${r.to.name}（${m2.label}・${Math.round(r.dist*10)/10}km・${fmtMins(r.mins)}・${fmtFare(r.fare)}）</div>
+        </div>`;}).join('')
     :`<p style="font-size:13px;color:var(--dim)">まだ完了レグはありません</p>`;
 }
 
-/* ══════════════════════════════════════════════════════
-   LOG / SHARE / NAV
-   ══════════════════════════════════════════════════════ */
+/* LOG / SHARE / NAV */
 function renderLog(){
   const el=document.getElementById('logc');
-  if(!S||!S.legs.length){el.innerHTML=`<div style="text-align:center;padding:44px 12px;color:var(--dim)">旅がまだ始まっていません</div>`;return;}
+  if(!S||!S.legs.length){el.innerHTML=`<div style="text-align:center;padding:44px;color:var(--dim)">旅がまだ始まっていません</div>`;return;}
   el.innerHTML=`<p style="font-size:12px;color:var(--dim);margin-bottom:12px">${S.origin.name} → ${S.destination.name}</p>`+
     [...S.legs].reverse().map(l=>{
       const r=l.selected;const m=r?MODES[r.mode]:null;
@@ -836,12 +689,12 @@ function renderLog(){
 
 function doShare(){
   if(!S){toast('ゲームが開始されていません');return;}
-  const d={v:7,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
+  const d={v:8,on:S.origin.name,dn:S.destination.name,cn:S.currentLocation.name,
     legs:S.legs.slice(-5).map(l=>({n:l.legNumber,r:l.diceRoll,
       s:l.selected?{tn:l.selected.to.name,mode:l.selected.mode,
         dist:Math.round(l.selected.dist*10)/10,mins:l.selected.mins,fare:l.selected.fare}:null}))};
   const url=location.href.split('?')[0]+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(()=>toast('📋 URLをコピーしました')).catch(()=>showFb(url));
+  if(navigator.clipboard?.writeText)navigator.clipboard.writeText(url).then(()=>toast('📋 URLをコピーしました')).catch(()=>showFb(url));
   else showFb(url);
 }
 function showFb(url){document.getElementById('shareout').innerHTML=`<div class="card"><p style="font-size:11px;word-break:break-all;line-height:1.7;color:var(--dim)">${url}</p></div>`;}
@@ -851,7 +704,7 @@ function swTab(t){
   document.querySelectorAll('.pn').forEach(p=>p.classList.remove('on'));
   document.querySelector(`[data-t="${t}"]`).classList.add('on');
   document.getElementById('pn-'+t).classList.add('on');
-  if(t==='log') renderLog();
+  if(t==='log')renderLog();
 }
 
 let _tt;
@@ -860,9 +713,10 @@ function toast(m){const e=document.getElementById('toast');e.textContent=m;e.cla
 async function checkApi(){
   const el=document.getElementById('apistatus');
   try{
-    const r=await Promise.race([fetch('https://express.heartrails.com/api/json?method=getStations&name=浜松'),new Promise((_,j)=>setTimeout(()=>j(),5000))]);
-    el.textContent=r.ok?'Heartrails ✅':'API ⚠️';
-    el.style.color=r.ok?'var(--gr)':'var(--re)';
+    const hits=await fetchByName('浜松');
+    el.textContent=hits.length?'Heartrails ✅':'API ⚠️';
+    el.style.color=hits.length?'var(--gr)':'var(--re)';
+    dbg(`API確認: fetchByName("浜松") → ${hits.length}件 (路線: ${[...new Set(hits.map(h=>h.line))].join(', ')})`);
   }catch{el.textContent='API ⚠️';el.style.color='var(--re)';}
 }
 
