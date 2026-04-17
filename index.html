@@ -265,70 +265,67 @@ async function fetchNearby(lat, lng, km=150){
   }catch(e){dbg(`fetchNearby ERROR: ${e.message}`);return [];}
 }
 
-// 4方向のアンカーポイントから並行取得して重複除去したリストを返す
+// 8方向のアンカーポイントから並行取得して重複除去
 //
-// 問題: 目的地方向の中間点だけを叩くと「逆方向」の駅が全く取れない
-//       → prog < 0 の候補がゼロになり 🎲1〜3 が埋まらない
+// Heartrailsは1クエリあたり最大数件しか返さないため、
+// 多方向・多点クエリで全方位をカバーする。
 //
-// 解決: 4方向を叩く
-//   ① 出発地付近 (半径120km) — 近距離・全方向
-//   ② 目的地方向 1/3地点 (半径150km) — 前進候補
-//   ③ 目的地方向 2/3地点 (半径150km) — 遠距離前進候補
-//   ④ 目的地の逆方向 250km地点 (半径150km) — 逆走候補 (prog < 0)
+// 8アンカー:
+//   前進方向 ×3 (25%/50%/75%地点)  → prog > 0
+//   後退方向 ×2 (25%/50%後方)      → prog < 0
+//   横方向   ×2 (左右)              → prog ≈ 0
+//   出発地   ×1                     → ローカル
 async function fetchAll(from, dest){
-  // 目的地方向の単位ベクトル
+  const totalDist = distKm(from, dest);
+
+  // 度単位の方向ベクトル（正規化）
   const dLat = dest.lat - from.lat;
   const dLng = dest.lng - from.lng;
-  const norm = Math.sqrt(dLat*dLat + dLng*dLng);
-  const uLat = dLat/norm, uLng = dLng/norm;
+  const norm  = Math.sqrt(dLat*dLat + dLng*dLng);
+  const uLat  = dLat/norm, uLng = dLng/norm;
+  // 垂直ベクトル（横方向）
+  const pLat  = -uLng, pLng = uLat;
 
-  // 逆方向 250km (度換算: 1度≒111km)
-  const backDist = 2.25; // 250km ÷ 111km/deg
-  const back = {
-    lat: from.lat - uLat * backDist,
-    lng: from.lng - uLng * backDist,
-  };
-  const fwd1 = {
-    lat: from.lat + (dest.lat-from.lat)*0.33,
-    lng: from.lng + (dest.lng-from.lng)*0.33,
-  };
-  const fwd2 = {
-    lat: from.lat + (dest.lat-from.lat)*0.67,
-    lng: from.lng + (dest.lng-from.lng)*0.67,
-  };
+  // 1ステップ ≈ 総距離の25%（度換算）
+  const step = Math.min(totalDist / 111 * 0.25, 3.5);
 
-  dbg(`fetchAll 4方向クエリ開始...`);
-  dbg(`  ① 出発地付近 (${from.lat.toFixed(2)},${from.lng.toFixed(2)}) r=120km`);
-  dbg(`  ② 前進1/3  (${fwd1.lat.toFixed(2)},${fwd1.lng.toFixed(2)}) r=150km`);
-  dbg(`  ③ 前進2/3  (${fwd2.lat.toFixed(2)},${fwd2.lng.toFixed(2)}) r=150km`);
-  dbg(`  ④ 逆方向   (${back.lat.toFixed(2)},${back.lng.toFixed(2)}) r=150km`);
+  const anchors = [
+    [from.lat,                    from.lng,                    100, '出発地'],
+    [from.lat + uLat*step,        from.lng + uLng*step,        120, '前進25%'],
+    [from.lat + uLat*step*2,      from.lng + uLng*step*2,      120, '前進50%'],
+    [from.lat + uLat*step*3,      from.lng + uLng*step*3,      120, '前進75%'],
+    [from.lat - uLat*step,        from.lng - uLng*step,        120, '後退25%'],
+    [from.lat - uLat*step*2,      from.lng - uLng*step*2,      120, '後退50%'],
+    [from.lat + pLat*step,        from.lng + pLng*step,        100, '右横'],
+    [from.lat - pLat*step,        from.lng - pLng*step,        100, '左横'],
+  ];
 
-  const [s1,s2,s3,s4] = await Promise.all([
-    fetchNearby(from.lat, from.lng, 120),
-    fetchNearby(fwd1.lat, fwd1.lng, 150),
-    fetchNearby(fwd2.lat, fwd2.lng, 150),
-    fetchNearby(back.lat, back.lng, 150),
-  ]);
+  dbg(`fetchAll: ${anchors.length}方向クエリ (step≈${Math.round(step*111)}km, total=${Math.round(totalDist)}km)`);
+  anchors.forEach((a,i)=>dbg(`  [${i+1}] ${a[3]} (${a[0].toFixed(2)},${a[1].toFixed(2)}) r=${a[2]}km`));
+
+  const results = await Promise.all(
+    anchors.map(([lat,lng,r]) => fetchNearby(lat,lng,r).catch(e=>{dbg('fetch ERR:'+e.message);return [];}))
+  );
 
   const seen = new Set();
-  const all = [];
-  for(const st of [...s1,...s2,...s3,...s4]){
-    if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
+  const all  = [];
+  for(const list of results){
+    for(const st of list){
+      if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
+    }
   }
-  dbg(`fetchAll: near=${s1.length} fwd1=${s2.length} fwd2=${s3.length} back=${s4.length} → 合計${all.length}駅`);
+  dbg(`fetchAll完了: [${results.map(r=>r.length).join(',')}] → 合計${all.length}駅`);
   return all;
 }
 
-// 出発地からの距離に応じて使える手段を返す
+// 距離に応じた最適手段（1〜2種類に絞る ← 同一目的地の消耗を防ぐ）
 function getModesForDist(d){
-  const m=[];
-  if(d <= 60)  m.push('local_bus');
-  if(d <= 300) m.push('local_train');
-  if(d <= 700) m.push('express_train');
-  if(d <= 750) m.push('highway_bus');
-  if(d <= 600) m.push('rental_car');
-  if(m.length===0) m.push('express_train'); // フォールバック
-  return m;
+  if(d <=  40) return ['local_bus'];
+  if(d <= 100) return ['local_train'];
+  if(d <= 250) return ['local_train', 'express_train'];
+  if(d <= 500) return ['express_train', 'highway_bus'];
+  if(d <= 750) return ['express_train', 'rental_car'];
+  return ['express_train'];
 }
 
 /* ══════════════════════════════════════════════════════
