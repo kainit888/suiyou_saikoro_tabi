@@ -283,7 +283,7 @@ async function hrFetch(params) {
     if (!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
     const list = (d?.response?.station || []).map(s => ({
-      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x), line: s.line,
+      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x), line: s.line, pref: s.prefecture||'',
     }));
     _cache.set(params, list);
     return list;
@@ -406,7 +406,7 @@ async function buildPool(from, dest) {
     if (d < 0.3) continue;
     const p = prog(from, st, dest);
     for (const mode of modesForDist(d)) {
-      pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
+      pool.push({to:{name:st.name,lat:st.lat,lng:st.lng,pref:st.pref||''}, mode, dist:d, prog:p,
         mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:null});
     }
   }
@@ -416,7 +416,7 @@ async function buildPool(from, dest) {
     if (distKm(from,{lat:fla,lng:fln}) > 60) continue;
     const to={name:tn,lat:tla,lng:tln};
     const d=distKm(from,to);
-    pool.push({to,mode:'ferry',dist:d,prog:prog(from,to,dest),
+    pool.push({to:{...to,pref:'（フェリー）'},mode:'ferry',dist:d,prog:prog(from,to,dest),
       mins,fare:MODES.ferry.fare(d),note:`${co}（${fn}発）`});
   }
 
@@ -426,7 +426,7 @@ async function buildPool(from, dest) {
       if (distKm(from,{lat:fla,lng:fln}) > 50) continue;
       const to={name:tn,lat:tla,lng:tln};
       const d=distKm(from,to);
-      pool.push({to,mode:'night_bus',dist:d,prog:prog(from,to,dest),
+      pool.push({to:{...to,pref:'（夜行バス）'},mode:'night_bus',dist:d,prog:prog(from,to,dest),
         mins,fare:MODES.night_bus.fare(d),note:`${co}（${fn}発・夜間）`});
     }
   }
@@ -480,7 +480,7 @@ async function buildPool(from, dest) {
           seen.add(st.name);
           allStations.push(st);
           for (const mode of modesForDist(d)) {
-            pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
+            pool.push({to:{name:st.name,lat:st.lat,lng:st.lng,pref:st.pref||''}, mode, dist:d, prog:p,
               mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:`(${line}乗換)`});
           }
         }
@@ -547,30 +547,37 @@ const SPD_RANK = {express_train:6,highway_bus:5,rental_car:5,night_bus:4,ferry:3
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
 function assignDice(pool) {
-  const used = new Set();
+  const usedNames = new Set();
+  const usedPrefs = new Set();
   const result = [];
 
   for (let die=1; die<=6; die++) {
     let picked = null;
     let usedBand = -1;
-
     const bands = getBands();
+
     for (let bi=0; bi<bands[die].length; bi++) {
       const [lo,hi] = bands[die][bi];
-      let cands = pool.filter(c => c.prog>=lo && c.prog<=hi && !used.has(c.to.name));
-      dbg(`🎲${die} band[${bi}](${lo}~${hi}): ${cands.length}件`);
+      // 都道府県被りも排除してフィルタ
+      let cands = pool.filter(c =>
+        c.prog>=lo && c.prog<=hi &&
+        !usedNames.has(c.to.name) &&
+        (!c.to.pref || !usedPrefs.has(c.to.pref))
+      );
+      // 都道府県制限で0件になったら都道府県は無視（フォールバック）
+      if (!cands.length) {
+        cands = pool.filter(c => c.prog>=lo && c.prog<=hi && !usedNames.has(c.to.name));
+      }
+      dbg(`🎲${die} band[${bi}](${lo.toFixed(2)}~${hi.toFixed(2)}): ${cands.length}件`);
       if (!cands.length) continue;
       usedBand = bi;
 
-      // 🎲5〜6: 近すぎる・進捗が低すぎる選択肢を除外
       if (die >= 5) {
-        const filtered = cands.filter(c => c.dist >= 20 && c.prog >= 0.05);
-        if (filtered.length > 0) cands = filtered;
-        else dbg(`🎲${die} 最低距離/進捗フィルター: 対象外のため緩和`);
+        const f = cands.filter(c => c.dist >= 20 && c.prog >= 0.05);
+        if (f.length) cands = f;
       }
-
       if (die === 1) {
-        cands.sort((a,b) => a.prog - b.prog); // prog最小
+        cands.sort((a,b) => a.prog - b.prog);
         picked = cands[0];
       } else if (die === 6) {
         cands.sort((a,b) => b.prog!==a.prog ? b.prog-a.prog : (SPD_RANK[b.mode]||0)-(SPD_RANK[a.mode]||0));
@@ -583,9 +590,10 @@ function assignDice(pool) {
     }
 
     if (picked) {
-      used.add(picked.to.name);
+      usedNames.add(picked.to.name);
+      if (picked.to.pref) usedPrefs.add(picked.to.pref);
       result.push({...picked, dieValue:die});
-      dbg(`🎲${die} → ${picked.to.name} (prog=${(picked.prog*100).toFixed(1)}%, ${picked.mode}, band=${usedBand})`);
+      dbg(`🎲${die} → ${picked.to.name} [${picked.to.pref||'?'}] prog=${(picked.prog*100).toFixed(1)}%`);
     } else {
       dbg(`🎲${die} → ❌ 候補なし`);
     }
@@ -754,7 +762,7 @@ function renderList(){
     return `<div class="crow">
       <div class="cbadge d${c.dieValue}">${c.dieValue}</div>
       <div class="cbody">
-        <div class="cdest">${m.icon} ${c.to.name}</div>
+        <div class="cdest">${m.icon} ${c.to.name}${c.to.pref?` <span style="font-size:11px;color:var(--dim);font-weight:400">${c.to.pref}</span>`:''}</div>
         <div class="cmeta">${m.label} ／ <b>${Math.round(c.dist*10)/10}km</b> ／ <b>${fmtMins(c.mins)}</b> ／ <b>${fmtFare(c.fare)}</b>
           <span style="color:${pct>=0?'var(--gr)':'var(--re)'};font-size:11px"> ／ 進捗${pct>=0?'+':''}${pct}%</span>
         </div>
