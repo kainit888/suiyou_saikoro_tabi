@@ -221,24 +221,66 @@ function progress(from, to, dest){
 
 /* ══════════════════════════════════════════════════════
    HEARTRAILS
+   ──────────────────────────────────────────────────────
+   Heartrailsは「指定座標から近い順に最大N件」を返す仕様のため、
+   1回のクエリだと近距離駅しか得られない。
+   出発地・中間点・目的地付近の3箇所を並行取得して
+   全距離帯の駅をカバーする。
    ══════════════════════════════════════════════════════ */
 const _cache = new Map();
-async function fetchNearby(lat, lng){
-  const k=`${lat.toFixed(2)},${lng.toFixed(2)}`;
+
+async function fetchNearby(lat, lng, km=150){
+  const k=`${lat.toFixed(2)},${lng.toFixed(2)}_${km}`;
   if(_cache.has(k)) return _cache.get(k);
   try{
-    const url=`https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=300`;
+    const url=`https://express.heartrails.com/api/json?method=getStations&x=${lng}&y=${lat}&distance=${km}`;
     const r=await Promise.race([fetch(url),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))]);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
     const list=(d?.response?.station||[]).map(s=>({
       name:s.name+'駅',lat:parseFloat(s.y),lng:parseFloat(s.x),
-      line:s.line,geo_dist:parseFloat(s.geo_distance||0),
+      line:s.line,
     }));
     _cache.set(k,list);
-    console.log(`[heartrails] ${list.length}駅取得`);
     return list;
   }catch(e){console.warn('[fetchNearby]',e.message);return [];}
+}
+
+// 3地点から並行取得して重複除去したリストを返す
+async function fetchAll(from, dest){
+  const mid1 = {
+    lat: from.lat+(dest.lat-from.lat)*0.33,
+    lng: from.lng+(dest.lng-from.lng)*0.33,
+  };
+  const mid2 = {
+    lat: from.lat+(dest.lat-from.lat)*0.67,
+    lng: from.lng+(dest.lng-from.lng)*0.67,
+  };
+  const [s1,s2,s3] = await Promise.all([
+    fetchNearby(from.lat, from.lng, 150),
+    fetchNearby(mid1.lat, mid1.lng, 200),
+    fetchNearby(mid2.lat, mid2.lng, 200),
+  ]);
+  // 重複除去（駅名ベース）
+  const seen = new Set();
+  const all = [];
+  for(const st of [...s1,...s2,...s3]){
+    if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
+  }
+  console.log(`[heartrails] near:${s1.length} mid1:${s2.length} mid2:${s3.length} → 計${all.length}駅`);
+  return all;
+}
+
+// 出発地からの距離に応じて使える手段を返す
+function getModesForDist(d){
+  const m=[];
+  if(d <= 60)  m.push('local_bus');
+  if(d <= 300) m.push('local_train');
+  if(d <= 700) m.push('express_train');
+  if(d <= 750) m.push('highway_bus');
+  if(d <= 600) m.push('rental_car');
+  if(m.length===0) m.push('express_train'); // フォールバック
+  return m;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -298,34 +340,24 @@ async function doGPS(){
 
 /* ══════════════════════════════════════════════════════
    MASTER POOL BUILDER
-
-   ① Heartrailsで300km圏内の全駅を取得
-   ② 各駅に対して全手段（距離レンジ内）でエントリを生成
-      同じ目的地でも手段が違えば別エントリ
-   ③ フェリー・夜行バスの静的データを追加
-      夜行バスは現在時刻が20:00〜6:00のときのみ追加
-
-   これで数百〜数千エントリのプールが完成する
    ══════════════════════════════════════════════════════ */
 async function buildPool(from, dest){
-  const stations = await fetchNearby(from.lat, from.lng);
-  const pool = [];
   const night = isNightTime();
 
-  // Heartrails駅 × 全手段
+  // 3地点から全駅取得（出発地・中間・目的地付近）
+  const stations = await fetchAll(from, dest);
+  const pool = [];
+
   for(const st of stations){
     const d = distKm(from, st);
-    if(d < 0.3) continue;
+    if(d < 0.5) continue;
     const prog = progress(from, st, dest);
-
-    for(const [mode, cfg] of Object.entries(MODES)){
-      if(mode === 'night_bus' || mode === 'ferry') continue; // 静的データで別途追加
-      if(d > cfg.maxKm) continue;
+    for(const mode of getModesForDist(d)){
       pool.push({
         to:{name:st.name,lat:st.lat,lng:st.lng},
         mode, dist:d, prog,
         mins:calcMins(d,mode),
-        fare:cfg.fare(d),
+        fare:MODES[mode].fare(d),
         note:null,
       });
     }
