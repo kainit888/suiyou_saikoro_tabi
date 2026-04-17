@@ -430,6 +430,40 @@ async function buildPool(from, dest) {
     }
   }
 
+  // ── 補充: マイナス進捗の駅が少ない場合は逆方向を追加クエリ ─────────
+  // 🎲1〜3が全部埋まるには最低3件のマイナス進捗エントリが必要
+  const negCount = pool.filter(e => e.prog < -0.001).length;
+  const negNames = new Set(pool.filter(e => e.prog < -0.001).map(e => e.to.name));
+  dbg(`マイナス進捗エントリ: ${negCount}件`);
+
+  if (negNames.size < 4) {
+    dbg(`⚠️ マイナス駅不足 (${negNames.size}件) → 逆方向補充クエリ`);
+    // 目的地の逆方向に 200km 離れた地点を中心にクエリ
+    const dLat = dest.lat - from.lat, dLng = dest.lng - from.lng;
+    const norm  = Math.sqrt(dLat*dLat + dLng*dLng);
+    const step  = 1.8; // ≈200km
+    const back  = { lat: from.lat - dLat/norm*step, lng: from.lng - dLng/norm*step };
+    dbg(`  逆方向クエリ地点: (${back.lat.toFixed(2)},${back.lng.toFixed(2)})`);
+    const backStations = await fetchNearby(back.lat, back.lng, 180);
+    const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
+    let added = 0;
+    for (const st of backStations) {
+      if (seen.has(st.name)) continue;
+      const d = distKm(from, st);
+      if (d < 0.3) continue;
+      const p = prog(from, st, dest);
+      if (p >= 0) continue; // マイナスのみ追加
+      seen.add(st.name);
+      allStations.push(st);
+      for (const mode of modesForDist(d)) {
+        pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
+          mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:'(補充)'});
+      }
+      added++;
+    }
+    dbg(`  補充: ${backStations.length}駅取得 → マイナス${added}駅追加`);
+  }
+
   // ログ
   const pb={vn:0,n:0,z:0,sp:0,mp:0,hp:0};
   for(const e of pool){
