@@ -389,7 +389,7 @@ async function buildPool(from, dest) {
   }
 
   // 路線が取れない場合は座標フォールバック
-  if (allStations.length < 10) {
+  if (allStations.length < 20) { // 20駅未満なら座標補完も実行
     dbg(`⚠️ 路線データ不足 → 座標フォールバック (r=300km)`);
     const nearby = await fetchNearby(from.lat, from.lng, 300);
     const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
@@ -430,38 +430,49 @@ async function buildPool(from, dest) {
     }
   }
 
-  // ── 補充: マイナス進捗の駅が少ない場合は逆方向を追加クエリ ─────────
-  // 🎲1〜3が全部埋まるには最低3件のマイナス進捗エントリが必要
-  const negCount = pool.filter(e => e.prog < -0.001).length;
-  const negNames = new Set(pool.filter(e => e.prog < -0.001).map(e => e.to.name));
-  dbg(`マイナス進捗エントリ: ${negCount}件`);
-
-  if (negNames.size < 4) {
-    dbg(`⚠️ マイナス駅不足 (${negNames.size}件) → 逆方向補充クエリ`);
-    // 目的地の逆方向に 200km 離れた地点を中心にクエリ
-    const dLat = dest.lat - from.lat, dLng = dest.lng - from.lng;
-    const norm  = Math.sqrt(dLat*dLat + dLng*dLng);
-    const step  = 1.8; // ≈200km
-    const back  = { lat: from.lat - dLat/norm*step, lng: from.lng - dLng/norm*step };
-    dbg(`  逆方向クエリ地点: (${back.lat.toFixed(2)},${back.lng.toFixed(2)})`);
-    const backStations = await fetchNearby(back.lat, back.lng, 180);
+  // ── 乗り換え拡張 ────────────────────────────────────────────────────
+  // 現在路線の「遠い駅」トップ3の接続路線も取得する。
+  // 例: ポートターミナル駅(ポートライナー) → 三宮駅 → JR神戸線 の全駅
+  // これにより小ローカル線でもプールが広がる。
+  {
+    const existingLineSet = new Set(lines);
     const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
-    let added = 0;
-    for (const st of backStations) {
-      if (seen.has(st.name)) continue;
-      const d = distKm(from, st);
-      if (d < 0.3) continue;
-      const p = prog(from, st, dest);
-      if (p >= 0) continue; // マイナスのみ追加
-      seen.add(st.name);
-      allStations.push(st);
-      for (const mode of modesForDist(d)) {
-        pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
-          mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:'(補充)'});
+
+    // 現在地から遠い順に最大3駅を乗り換え候補とする
+    const transferHubs = [...allStations]
+      .sort((a,b) => distKm(from,b) - distKm(from,a))
+      .slice(0, 3);
+
+    dbg(`乗り換え拡張: ${transferHubs.map(s=>s.name).join(' / ')} を起点に接続路線を探索`);
+
+    for (const hub of transferHubs) {
+      const hubBase = hub.name.replace(/駅$/, '');
+      const hubHits = await fetchByName(hubBase);
+      const newLines = [...new Set(hubHits.map(s=>s.line).filter(Boolean))]
+        .filter(l => !existingLineSet.has(l));
+
+      if (!newLines.length) continue;
+      dbg(`  ${hub.name} の接続路線: ${newLines.join(' / ')}`);
+
+      for (const line of newLines.slice(0, 3)) { // 各乗換駅につき最大3路線
+        existingLineSet.add(line);
+        const lStations = await fetchByLine(line);
+        dbg(`    ${line}: ${lStations.length}駅`);
+        for (const st of lStations) {
+          if (seen.has(st.name)) continue;
+          const d = distKm(from, st);
+          if (d < 0.3) continue;
+          const p = prog(from, st, dest);
+          seen.add(st.name);
+          allStations.push(st);
+          for (const mode of modesForDist(d)) {
+            pool.push({to:{name:st.name,lat:st.lat,lng:st.lng}, mode, dist:d, prog:p,
+              mins:calcMins(d,mode), fare:MODES[mode].fare(d), note:`(${line}乗換)`});
+          }
+        }
       }
-      added++;
     }
-    dbg(`  補充: ${backStations.length}駅取得 → マイナス${added}駅追加`);
+    dbg(`乗り換え拡張後: 合計${allStations.length}駅 / ${pool.length}エントリ`);
   }
 
   // ログ
@@ -534,6 +545,13 @@ function assignDice(pool) {
       dbg(`🎲${die} band[${bi}](${lo}~${hi}): ${cands.length}件`);
       if (!cands.length) continue;
       usedBand = bi;
+
+      // 🎲5〜6: 近すぎる・進捗が低すぎる選択肢を除外
+      if (die >= 5) {
+        const filtered = cands.filter(c => c.dist >= 20 && c.prog >= 0.05);
+        if (filtered.length > 0) cands = filtered;
+        else dbg(`🎲${die} 最低距離/進捗フィルター: 対象外のため緩和`);
+      }
 
       if (die === 1) {
         cands.sort((a,b) => a.prog - b.prog); // prog最小
