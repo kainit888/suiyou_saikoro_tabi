@@ -71,10 +71,36 @@ input:focus{border-color:var(--am)}
 </head>
 <body>
 <div id="toast"></div>
+
+<!-- 設定シート -->
+<div id="cfg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-end">
+  <div style="background:var(--s1);border-radius:20px 20px 0 0;padding:20px;padding-bottom:calc(20px + var(--sab));width:100%;border-top:1px solid var(--bd)">
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:18px">⚙️ ダイス設定</div>
+
+    <div style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;color:var(--dim)">ダイス傾向</span>
+        <span id="bias-label" style="font-size:13px;color:var(--am);font-weight:700"></span>
+      </div>
+      <input type="range" id="bias-slider" min="-3" max="3" step="1" value="0"
+        style="width:100%" oninput="updateBiasLabel()">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:3px">
+        <span>まったり</span><span>標準</span><span>ハード</span>
+      </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6" id="bias-desc"></div>
+    </div>
+
+    <button class="btn btn-p" onclick="saveSettings()">保存して閉じる</button>
+    <button class="btn btn-s" onclick="closeSettings()">キャンセル</button>
+  </div>
+</div>
 <div id="app">
   <div id="hdr">
     <span style="font-size:18px;font-weight:700">🎲 サイコロ旅</span>
-    <span id="apistatus" style="font-size:11px;color:var(--dim)">…</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="apistatus" style="font-size:11px;color:var(--dim)">…</span>
+      <button class="ibtn" onclick="openSettings()" style="padding:7px 10px;font-size:13px">⚙️</button>
+    </div>
   </div>
   <div id="tabs">
     <button class="tab on" data-t="game" onclick="swTab('game')">📍 ゲーム</button>
@@ -433,14 +459,26 @@ async function buildPool(from, dest) {
 
    各帯に候補不足の場合は段階的に帯を広げる
    ═══════════════════════════════════════════════════════ */
-const BANDS = {
-  1:[[-1.0,-0.05],[-1.0, 0.0], [-1.0, 0.1], [-1.0, 1.0]],
-  2:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]],
-  3:[[-1.0, 0.15],[-1.0, 0.25],[-1.0, 0.4], [-1.0, 1.0]],
-  4:[[ 0.05, 0.45],[ 0.0, 0.55],[-0.1, 0.65],[-1.0, 1.0]],
-  5:[[ 0.2,  0.8], [ 0.1, 0.9], [ 0.0, 1.0], [-1.0, 1.0]],
-  6:[[ 0.3,  1.0], [ 0.15,1.0], [ 0.0, 1.0], [-1.0, 1.0]],
-};
+// bias: -3(まったり)〜0(標準)〜+3(ハード)
+// 1-3はマイナス方向、4-6はプラス方向が基本
+// biasが高いほど1-3はより強烈な逆走・4-6はより遠くへ
+let _bias = 0;
+function getBands(bias=_bias) {
+  // 1-3の上限: 標準0% → biasが大きいほどマイナスへ
+  const neg = bias * 0.08;       // bias=3 → -0.24（24%逆走以上が対象）
+  // 4-6の下限: 標準5〜30% → biasが大きいほどプラスへ
+  const pos4 = 0.05 + bias*0.05; // bias=3 → 20%前進以上
+  const pos5 = 0.15 + bias*0.06; // bias=3 → 33%前進以上
+  const pos6 = 0.25 + bias*0.07; // bias=3 → 46%前進以上
+  return {
+    1:[[-1.0, -0.05-neg],[-1.0, -neg],   [-1.0, 0.05],[-1.0, 1.0]],
+    2:[[-1.0, -neg],     [-1.0, 0.05-neg],[-1.0, 0.1], [-1.0, 1.0]],
+    3:[[-1.0, 0.0-neg],  [-1.0, 0.05],   [-1.0, 0.15],[-1.0, 1.0]],
+    4:[[pos4, 0.6],      [0.0,  0.7],    [-0.1, 0.8], [-1.0, 1.0]],
+    5:[[pos5, 0.85],     [0.05, 0.9],    [0.0,  1.0], [-1.0, 1.0]],
+    6:[[pos6, 1.0],      [0.1,  1.0],    [0.0,  1.0], [-1.0, 1.0]],
+  };
+}
 const SPD_RANK = {express_train:6,highway_bus:5,rental_car:5,night_bus:4,ferry:3,local_train:2,local_bus:1};
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -453,8 +491,9 @@ function assignDice(pool) {
     let picked = null;
     let usedBand = -1;
 
-    for (let bi=0; bi<BANDS[die].length; bi++) {
-      const [lo,hi] = BANDS[die][bi];
+    const bands = getBands();
+    for (let bi=0; bi<bands[die].length; bi++) {
+      const [lo,hi] = bands[die][bi];
       let cands = pool.filter(c => c.prog>=lo && c.prog<=hi && !used.has(c.to.name));
       dbg(`🎲${die} band[${bi}](${lo}~${hi}): ${cands.length}件`);
       if (!cands.length) continue;
@@ -710,6 +749,43 @@ function swTab(t){
 let _tt;
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>e.classList.remove('show'),2800);}
 
+// 設定
+const BIAS_LABELS = {
+  '-3':'まったり（全方向ゆるめ）',
+  '-2':'やや緩め',
+  '-1':'少し緩め',
+  '0': '標準（1-3逆走 / 4-6前進）',
+  '1': '少しハード',
+  '2': 'ハード（逆走強め）',
+  '3': '超ハード（強烈逆走 / 遠距離前進）',
+};
+const BIAS_DESCS = {
+  '-3':'🎲1-3: 横移動も可 / 🎲4-6: 少し前進でOK',
+  '-2':'🎲1-3: 進捗-8%以下 / 🎲4-6: 進捗+0%以上',
+  '-1':'🎲1-3: 進捗-4%以下 / 🎲4-6: 進捗+2%以上',
+  '0': '🎲1-3: 進捗0%以下（逆走） / 🎲4-6: 進捗+5%以上',
+  '1': '🎲1-3: 進捗-8%以下 / 🎲4-6: 進捗+10%以上',
+  '2': '🎲1-3: 進捗-16%以下 / 🎲4-6: 進捗+15%以上',
+  '3': '🎲1-3: 進捗-24%以下 / 🎲4-6: 進捗+20%以上',
+};
+function updateBiasLabel(){
+  const v=document.getElementById('bias-slider').value;
+  document.getElementById('bias-label').textContent=BIAS_LABELS[v]||v;
+  document.getElementById('bias-desc').textContent=BIAS_DESCS[v]||'';
+}
+function openSettings(){
+  document.getElementById('bias-slider').value=_bias;
+  updateBiasLabel();
+  document.getElementById('cfg-overlay').style.display='flex';
+}
+function closeSettings(){document.getElementById('cfg-overlay').style.display='none';}
+function saveSettings(){
+  _bias=parseInt(document.getElementById('bias-slider').value)||0;
+  localStorage.setItem('saikoro_bias',_bias);
+  closeSettings();
+  toast(`設定を保存しました（${BIAS_LABELS[_bias]}）`);
+}
+
 async function checkApi(){
   const el=document.getElementById('apistatus');
   try{
@@ -720,6 +796,8 @@ async function checkApi(){
   }catch{el.textContent='API ⚠️';el.style.color='var(--re)';}
 }
 
+// 設定読み込み
+_bias = parseInt(localStorage.getItem('saikoro_bias')||'0');
 load();render();checkApi();
 </script>
 </body>
