@@ -444,10 +444,18 @@ async function buildPool(from, dest) {
     const existingLineSet = new Set(lines);
     const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
 
-    // 現在地から遠い順に最大3駅を乗り換え候補とする
-    const transferHubs = [...allStations]
-      .sort((a,b) => distKm(from,b) - distKm(from,a))
-      .slice(0, 3);
+    // 乗り換え起点を3方向から選ぶ
+    //   ① 目的地方向の端点（最も進捗が高い駅）→ 前進路線を取得
+    //   ② 逆方向の端点（最も進捗が低い駅）  → 逆走路線を取得
+    //   ③ 最も遠い駅（距離最大）            → 全般的な多様性
+    const sorted_prog_desc = [...allStations].sort((a,b)=>prog(from,b,dest)-prog(from,a,dest));
+    const sorted_prog_asc  = [...allStations].sort((a,b)=>prog(from,a,dest)-prog(from,b,dest));
+    const sorted_dist_desc = [...allStations].sort((a,b)=>distKm(from,b)-distKm(from,a));
+    const hubSet = new Set();
+    const transferHubs = [];
+    for (const st of [sorted_prog_desc[0], sorted_prog_asc[0], sorted_dist_desc[0]]) {
+      if (st && !hubSet.has(st.name)) { hubSet.add(st.name); transferHubs.push(st); }
+    }
 
     dbg(`乗り換え拡張: ${transferHubs.map(s=>s.name).join(' / ')} を起点に接続路線を探索`);
 
