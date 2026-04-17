@@ -227,7 +227,13 @@ const BOARD = {local_bus:5,local_train:8,express_train:15,highway_bus:15,rental_
 function calcMins(d,m){return Math.max(3,Math.round(d/MODES[m].spd*60+(BOARD[m]||0)));}
 function fmtMins(m){return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'');}
 function fmtFare(y){return y===0?'無料':'約'+y.toLocaleString()+'円';}
-function isNight(){const h=new Date().getHours();return h>=20||h<6;}
+// 夜行バスが選択肢に入る時間帯:
+// 想定出発時刻 22:00 に対して「5時間前〜1時間前」= 17:00〜21:00
+// ※ 実際の便は各社で異なるが、当日予約可能な現実的ウィンドウとして設定
+function isNightBusAvailable() {
+  const h = new Date().getHours();
+  return h >= 17 && h < 21;
+}
 
 /* ═══════════════════════════════════════════════════════
    DEBUG
@@ -365,7 +371,7 @@ function modesForDist(d) {
 }
 
 async function buildPool(from, dest) {
-  const night = isNight();
+  const night = isNightBusAvailable();
   const pool  = [];
 
   // ① 現在地の路線を取得
@@ -745,8 +751,13 @@ function renderPc(){
     `<div style="font-size:15px;font-weight:700">${S.origin.name} → ${S.destination.name}</div>
      <div style="font-size:13px;color:var(--am);margin-top:3px">📍 現在地: ${S.currentLocation.name}</div>
      <div style="font-size:11px;color:var(--dim);margin-top:2px">残り約 ${d}km ／ ${done}レグ完了</div>`;
-  document.getElementById('time-info').textContent=
-    isNight()?'🌙 夜間モード（夜行バス利用可）':'☀️ 昼間モード（夜行バスは20時から）';
+  const _h = new Date().getHours();
+  const _timeMsg = isNightBusAvailable()
+    ? '🌙 夜行バス予約ウィンドウ（17〜21時）'
+    : _h >= 21
+      ? '🌃 深夜（夜行バスは出発済み・明日以降）'
+      : `☀️ 昼間モード（夜行バスは17時から）`;
+  document.getElementById('time-info').textContent = _timeMsg;
 }
 
 function renderList(){
