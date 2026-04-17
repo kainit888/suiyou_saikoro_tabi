@@ -431,11 +431,16 @@ async function buildPool(from, dest) {
     }
   }
 
-  // ── 乗り換え拡張 ────────────────────────────────────────────────────
-  // 現在路線の「遠い駅」トップ3の接続路線も取得する。
-  // 例: ポートターミナル駅(ポートライナー) → 三宮駅 → JR神戸線 の全駅
-  // これにより小ローカル線でもプールが広がる。
-  {
+  // ── 乗り換え拡張（ループ防止のみ発動） ─────────────────────────────
+  // プールに十分な多様性がある場合は不要。
+  // 「ユニークな行き先が6件未満」または「マイナス進捗3件未満」または「高進捗3件未満」の
+  // いずれかの場合のみ乗り換え拡張を実行する。
+  const _uniqueDests  = new Set(pool.map(e=>e.to.name)).size;
+  const _negUnique    = new Set(pool.filter(e=>e.prog<-0.001).map(e=>e.to.name)).size;
+  const _highUnique   = new Set(pool.filter(e=>e.prog>=0.10).map(e=>e.to.name)).size;
+  const _needTransfer = _uniqueDests < 6 || _negUnique < 3 || _highUnique < 3;
+  dbg(`プール評価: ユニーク${_uniqueDests}駅 / マイナス${_negUnique}駅 / 高進捗${_highUnique}駅 → 乗換拡張=${_needTransfer}`);
+  if (_needTransfer) {
     const existingLineSet = new Set(lines);
     const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
 
@@ -474,6 +479,8 @@ async function buildPool(from, dest) {
       }
     }
     dbg(`乗り換え拡張後: 合計${allStations.length}駅 / ${pool.length}エントリ`);
+  } else {
+    dbg(`乗換拡張スキップ（プール十分）`);
   }
 
   // ログ
