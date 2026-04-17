@@ -106,6 +106,10 @@ input:focus{border-color:var(--am)}
       <div id="st-dice" style="display:none">
         <div id="pc" class="pc"></div>
         <div id="time-info" style="font-size:11px;color:var(--dim);margin-bottom:8px;text-align:right"></div>
+        <details id="debug-wrap" style="margin-bottom:10px">
+          <summary style="font-size:11px;color:var(--dim);cursor:pointer;user-select:none">🔍 デバッグログ（タップで展開）</summary>
+          <div id="debug-log" style="font-size:10px;color:var(--dim);background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;margin-top:6px;max-height:220px;overflow-y:auto;font-family:monospace;line-height:1.7;white-space:pre-wrap;word-break:break-all"></div>
+        </details>
         <div id="clist"></div>
         <button class="btn btn-s" style="margin-top:4px" onclick="endGame()">🏁 終了</button>
       </div>
@@ -201,6 +205,20 @@ function fmtFare(y){return y===0?'無料':'約'+y.toLocaleString()+'円';}
 function isNightTime(){const h=new Date().getHours();return h>=20||h<6;}
 
 /* ══════════════════════════════════════════════════════
+   DEBUG LOGGER
+   ══════════════════════════════════════════════════════ */
+const _logs = [];
+function dbg(msg){
+  const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = `[${t}] ${msg}`;
+  _logs.push(line);
+  console.log(line);
+  const el = document.getElementById('debug-log');
+  if(el){ el.textContent = _logs.slice(-60).join('\n'); el.scrollTop = el.scrollHeight; }
+}
+function dbgClear(){ _logs.length=0; const el=document.getElementById('debug-log'); if(el) el.textContent=''; }
+
+/* ══════════════════════════════════════════════════════
    GEO
    ══════════════════════════════════════════════════════ */
 function distKm(a,b){
@@ -242,8 +260,9 @@ async function fetchNearby(lat, lng, km=150){
       line:s.line,
     }));
     _cache.set(k,list);
+    dbg(`fetchNearby(${lat.toFixed(2)},${lng.toFixed(2)},${km}km) → ${list.length}駅`);
     return list;
-  }catch(e){console.warn('[fetchNearby]',e.message);return [];}
+  }catch(e){dbg(`fetchNearby ERROR: ${e.message}`);return [];}
 }
 
 // 3地点から並行取得して重複除去したリストを返す
@@ -267,7 +286,7 @@ async function fetchAll(from, dest){
   for(const st of [...s1,...s2,...s3]){
     if(!seen.has(st.name)){ seen.add(st.name); all.push(st); }
   }
-  console.log(`[heartrails] near:${s1.length} mid1:${s2.length} mid2:${s3.length} → 計${all.length}駅`);
+  dbg(`fetchAll: near=${s1.length} mid1=${s2.length} mid2=${s3.length} → 合計${all.length}駅`);
   return all;
 }
 
@@ -383,7 +402,21 @@ async function buildPool(from, dest){
     }
   }
 
-  console.log(`[pool] ${stations.length}駅 → ${pool.length}エントリ（夜間=${night}）`);
+  // progの分布をログ出力
+  const progBuckets = {very_neg:0, neg:0, near_zero:0, small_pos:0, mid_pos:0, high_pos:0};
+  for(const e of pool){
+    if(e.prog < -0.1) progBuckets.very_neg++;
+    else if(e.prog < 0) progBuckets.neg++;
+    else if(e.prog < 0.1) progBuckets.near_zero++;
+    else if(e.prog < 0.3) progBuckets.small_pos++;
+    else if(e.prog < 0.6) progBuckets.mid_pos++;
+    else progBuckets.high_pos++;
+  }
+  const modeCount = {};
+  for(const e of pool) modeCount[e.mode]=(modeCount[e.mode]||0)+1;
+  dbg(`pool: ${stations.length}駅 → ${pool.length}エントリ (夜間=${night})`);
+  dbg(`prog分布: <-10%:${progBuckets.very_neg} -10~0%:${progBuckets.neg} 0~10%:${progBuckets.near_zero} 10~30%:${progBuckets.small_pos} 30~60%:${progBuckets.mid_pos} 60%+:${progBuckets.high_pos}`);
+  dbg(`手段: ${Object.entries(modeCount).map(([k,v])=>k+'='+v).join(' ')}`);
   return pool;
 }
 
@@ -429,10 +462,14 @@ function assignDice(pool){
   for(let die=1; die<=6; die++){
     const rule = DICE_RULES[die];
     let picked = null;
+    let usedBandIdx = -1;
 
-    for(const [minP, maxP] of rule.bands){
+    for(let bi=0; bi<rule.bands.length; bi++){
+      const [minP, maxP] = rule.bands[bi];
       let cands = pool.filter(c => c.prog >= minP && c.prog <= maxP && !used.has(c.to.name));
+      dbg(`🎲${die} band[${bi}](${minP}~${maxP}): ${cands.length}件`);
       if(!cands.length) continue;
+      usedBandIdx = bi;
 
       if(rule.sort === 'min'){
         cands.sort((a,b) => a.prog - b.prog); // prog最小（最も遠ざかる）
@@ -454,12 +491,14 @@ function assignDice(pool){
     if(picked){
       used.add(picked.to.name);
       result.push({...picked, dieValue:die});
+      dbg(`🎲${die} → ${picked.to.name} (prog=${(picked.prog*100).toFixed(1)}%, ${picked.mode}, band=${usedBandIdx})`);
     } else {
-      console.warn(`[dice] 🎲${die} 候補なし（pool=${pool.length}）`);
+      dbg(`🎲${die} → ❌ 候補なし (used=${[...used].join(',')})`);
     }
   }
 
-  console.log(`[dice] ${result.length}/6件選出`);
+  dbg(`assignDice: ${result.length}/6件選出 → [${result.map(r=>`🎲${r.dieValue}:${r.to.name}(${(r.prog*100).toFixed(1)}%)`).join(', ')}]`);
+  if(result.length < 6) dbg(`⚠️ ${6-result.length}件不足 (pool=${pool.length}件)`);
   return result;
 }
 
@@ -506,6 +545,11 @@ async function startGame(){
 
 async function loadCandidates(){
   if(!S) return;
+  dbgClear();
+  dbg(`=== loadCandidates 開始 ===`);
+  dbg(`現在地: ${S.currentLocation.name} (${S.currentLocation.lat?.toFixed(4)}, ${S.currentLocation.lng?.toFixed(4)})`);
+  dbg(`目的地: ${S.destination.name} (${S.destination.lat?.toFixed(4)}, ${S.destination.lng?.toFixed(4)})`);
+  dbg(`総距離: ${distKm(S.currentLocation,S.destination).toFixed(1)}km`);
   S.status='loading';render();
   try{
     const pool=await buildPool(S.currentLocation,S.destination);
