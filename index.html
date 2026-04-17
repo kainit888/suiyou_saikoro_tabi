@@ -1,4 +1,59 @@
-<!DOCTYPE html>
+/* ══════════════════════════════════════════════════════
+   HEARTRAILS  路線ベースAPI
+   ──────────────────────────────────────────────────────
+   水曜どうでしょう方式:
+   「今いる駅から出ている路線の終着駅まで全部リストする」
+   → その中からダイス6択を選ぶ
+
+   使うAPIエンドポイント:
+   ① getStations?name=xxx  → 駅名から路線名を取得
+   ② getStations?line=xxx  → 路線名から全駅リストを取得
+   ③ getStations?x=&y=&distance= → 座標検索（フォールバック用）
+   ══════════════════════════════════════════════════════ */
+const _cache = new Map();
+
+async function hrFetch(params) {
+  const url = `https://express.heartrails.com/api/json?${params}`;
+  const k = params;
+  if (_cache.has(k)) return _cache.get(k);
+  try {
+    const r = await Promise.race([
+      fetch(url),
+      new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))
+    ]);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    const list = (d?.response?.station||[]).map(s=>({
+      name: s.name+'駅', lat: parseFloat(s.y), lng: parseFloat(s.x), line: s.line,
+    }));
+    _cache.set(k, list);
+    return list;
+  } catch(e) { dbg('hrFetch ERR('+params+'): '+e.message); return []; }
+}
+
+// 駅名から路線一覧を取得
+async function fetchByName(stationBase) {
+  return hrFetch(`method=getStations&name=${encodeURIComponent(stationBase)}`);
+}
+
+// 路線名から全駅を取得
+async function fetchByLine(line) {
+  return hrFetch(`method=getStations&line=${encodeURIComponent(line)}`);
+}
+
+// 座標から近隣駅を取得（フォールバック・GPS用）
+async function fetchNearby(lat, lng, km=150) {
+  return hrFetch(`method=getStations&x=${lng}&y=${lat}&distance=${km}`);
+}
+
+// 距離に応じた最適手段（1〜2種類）
+function getModesForDist(d) {
+  if (d <=  40) return ['local_bus'];
+  if (d <= 100) return ['local_train'];
+  if (d <= 250) return ['local_train','express_train'];
+  if (d <= 600) return ['express_train','highway_bus'];
+  return ['express_train'];
+}<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -384,20 +439,55 @@ async function doGPS(){
 }
 
 /* ══════════════════════════════════════════════════════
-   MASTER POOL BUILDER
+   MASTER POOL BUILDER  路線ベース版
+   ──────────────────────────────────────────────────────
+   ① 現在地の駅名で路線一覧を取得
+   ② 各路線の全駅をリストアップ
+   ③ 全駅 × 距離に応じた手段 でプール化
+   → 東海道本線なら東京〜大阪の全駅が候補に入る
    ══════════════════════════════════════════════════════ */
 async function buildPool(from, dest){
   const night = isNightTime();
-
-  // 3地点から全駅取得（出発地・中間・目的地付近）
-  const stations = await fetchAll(from, dest);
   const pool = [];
 
-  for(const st of stations){
+  // ── Step1: 現在地の路線を取得 ─────────────────────────────────
+  const base = from.name.replace(/駅$/,'');
+  const nameHits = await fetchByName(base);
+  const lines = [...new Set(nameHits.map(s=>s.line).filter(Boolean))];
+  dbg(`${from.name} → ${lines.length}路線: ${lines.slice(0,8).join(' / ')}${lines.length>8?'...':''}`);
+
+  let allStations = [];
+
+  if (lines.length > 0) {
+    // ── Step2: 各路線の全駅を並行取得 ────────────────────────────
+    const lineResults = await Promise.all(lines.map(l=>fetchByLine(l)));
+    const seen = new Set([from.name]);
+    for (let i=0; i<lines.length; i++) {
+      dbg(`  ${lines[i]}: ${lineResults[i].length}駅`);
+      for (const st of lineResults[i]) {
+        if (!seen.has(st.name)) { seen.add(st.name); allStations.push(st); }
+      }
+    }
+    dbg(`路線上の合計: ${allStations.length}駅`);
+  }
+
+  // 路線が取れなかった or 少なすぎる場合は座標フォールバック
+  if (allStations.length < 10) {
+    dbg(`⚠️ 路線取得不足 → 座標フォールバック`);
+    const nearby = await fetchNearby(from.lat, from.lng, 300);
+    const seen = new Set([from.name, ...allStations.map(s=>s.name)]);
+    for (const st of nearby) {
+      if (!seen.has(st.name)) { seen.add(st.name); allStations.push(st); }
+    }
+    dbg(`フォールバック後: ${allStations.length}駅`);
+  }
+
+  // ── Step3: プール化 ───────────────────────────────────────────
+  for (const st of allStations) {
     const d = distKm(from, st);
-    if(d < 0.5) continue;
+    if (d < 0.3) continue;
     const prog = progress(from, st, dest);
-    for(const mode of getModesForDist(d)){
+    for (const mode of getModesForDist(d)) {
       pool.push({
         to:{name:st.name,lat:st.lat,lng:st.lng},
         mode, dist:d, prog,
@@ -408,19 +498,19 @@ async function buildPool(from, dest){
     }
   }
 
-  // フェリー（常時）
+  // ── Step4: フェリー（常時）────────────────────────────────────
   for(const [fn,fla,fln,tn,tla,tln,mins,co] of FERRY){
-    if(distKm(from,{lat:fla,lng:fln}) > 50) continue;
+    if(distKm(from,{lat:fla,lng:fln}) > 60) continue;
     const to={name:tn,lat:tla,lng:tln};
     const d=distKm(from,to);
     pool.push({to,mode:'ferry',dist:d,prog:progress(from,to,dest),
       mins,fare:MODES.ferry.fare(d),note:`${co}（${fn}発）`});
   }
 
-  // 夜行バス（夜間のみ）
+  // ── Step5: 夜行バス（夜間のみ）───────────────────────────────
   if(night){
     for(const [fn,fla,fln,tn,tla,tln,mins,co] of NIGHTBUS){
-      if(distKm(from,{lat:fla,lng:fln}) > 40) continue;
+      if(distKm(from,{lat:fla,lng:fln}) > 50) continue;
       const to={name:tn,lat:tla,lng:tln};
       const d=distKm(from,to);
       pool.push({to,mode:'night_bus',dist:d,prog:progress(from,to,dest),
